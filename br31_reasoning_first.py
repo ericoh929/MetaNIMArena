@@ -6,6 +6,14 @@ import argparse
 import json
 import re
 from openai import OpenAI
+import torch
+import transformers
+
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+import os
+os.environ['CUDA_VISIBLE_DEVICES'] = '0, 1, 2, 3'
+
 
 import os
 import google.generativeai as genai
@@ -36,13 +44,50 @@ self_consistency_count = 10  # Number of responses to use for self-consistency
 n_step_lookahead = 3  # Number of lookahead steps for n-step opponent modeling
 debate_rounds = 3  # Maximum number of debate rounds
 
+def _build_llama_model():
+    base_model = '/home/jihwan/LLM/local_model/llama3.1_8b/instruct'
+    llama_model = AutoModelForCausalLM.from_pretrained(
+            base_model,
+            device_map = 'auto'
+        )
+    llama_tokenizer = AutoTokenizer.from_pretrained(base_model)
+    return llama_model, llama_tokenizer
+
+# def llama_say(prompt):
+#     base_model = '/home/jihwan/LLM/local_model/llama3.1_8b/instruct'
+#     pipeline = transformers.pipeline(
+#     "text-generation", model=base_model, model_kwargs={"torch_dtype": torch.bfloat16}, device_map="auto"
+#     )
+
+#     response = pipeline(prompt)
+#     print('response: ', response)
+
+def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
+    alpaca_format_str = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+    {system} <|eot_id|>
+    <|start_header_id|>user<|end_header_id|>
+
+    {instruction}<|eot_id|>
+    <|start_header_id|>assistant<|end_header_id|>
+    """
+    
+    return alpaca_format_str
+
+if args.agent1_model == 'Llama3.1-8B-Instruct':
+    model, tokenizer = _build_llama_model()
+
+def say_model(system, instruction_str, model=model, tokenizer=tokenizer):
+    if args.agent1_model == 'Llama3.1-8B-Instruct':
+        inputs = tokenizer(convert_to_llama_format(system, instruction_str), return_tensors = "pt").to("cuda")
+        outputs = model.generate(**inputs, max_new_tokens = 500, use_cache = True, temperature = 0.7, top_p = 0.95, pad_token_id = tokenizer.eos_token_id)
+        return(tokenizer.batch_decode(outputs)[0])
+
 # Define agents with their respective models and prompting methods
 agents = [
     {"name": "Agent 1", "model": args.agent1_model, "prompting_method": args.agent1_prompt},
     {"name": "Agent 2", "model": args.agent2_model, "prompting_method": args.agent2_prompt}
 ]
-
-
 
 # Function for basic move (single-response without consistency or modeling)
 def get_basic_move(agent, remaining_items):
@@ -53,8 +98,12 @@ def get_basic_move(agent, remaining_items):
     Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
     """
+    if agent["model"] == 'Llama3.1-8B-Instruct':
+        system_prompt = "You are a skilled Nim player."
+        response = say_model(system_prompt, prompt)
+        content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
 
-    if agent["model"] == 'gemini-1.5-flash':
+    elif agent["model"] == 'gemini-1.5-flash':
 
         # Create the model
         generation_config = {
@@ -79,7 +128,7 @@ def get_basic_move(agent, remaining_items):
         response = chat_session.send_message(f"{prompt}")
 
         content = response.text
-    else:
+    elif agent["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
         response = client.chat.completions.create(
         messages=[
             {
@@ -117,7 +166,24 @@ def get_consistent_move(agent, remaining_items, num_responses):
     """
     moves = []
 
-    if agent["model"] == 'gemini-1.5-flash':
+    if agent["model"] == 'Llama3.1-8B-Instruct':
+        for _ in range(num_responses):
+            system_prompt = "You are a skilled Nim player."
+            response = say_model(system_prompt, prompt)
+            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+
+            matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+
+            parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+
+            parsed_content = json.loads(parsed_content_with_braces)
+
+            reasoning = parsed_content.get("reasoning")
+            action = parsed_content.get("action")
+            move = int(action)
+            moves.append(move)
+
+    elif agent["model"] == 'gemini-1.5-flash':
         for _ in range(num_responses):
             # Create the model
             generation_config = {
@@ -142,7 +208,18 @@ def get_consistent_move(agent, remaining_items, num_responses):
             response = chat_session.send_message(f"{prompt}")
 
             content = response.text
-    else:
+            matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+
+            parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+
+            parsed_content = json.loads(parsed_content_with_braces)
+
+            reasoning = parsed_content.get("reasoning")
+            action = parsed_content.get("action")
+            move = int(action)
+            moves.append(move)
+
+    elif agent["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
         for _ in range(num_responses):
             response = client.chat.completions.create(
                 messages=[
@@ -160,23 +237,16 @@ def get_consistent_move(agent, remaining_items, num_responses):
                 )
             content = response.choices[0].message.content
 
-    matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+            matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
-# Extracted content including { }
-    parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+            parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
 
-    # print(parsed_content_with_braces)
+            parsed_content = json.loads(parsed_content_with_braces)
 
-    # content_trimmed = content[3:-3].strip()
-    # print('content trimmed::', content_trimmed)
-    # parsed_content = json.loads(content_trimmed)
-    parsed_content = json.loads(parsed_content_with_braces)
-
-    # Extract reasoning and action
-    reasoning = parsed_content.get("reasoning")
-    action = parsed_content.get("action")
-    move = int(action)
-    moves.append(move)
+            reasoning = parsed_content.get("reasoning")
+            action = parsed_content.get("action")
+            move = int(action)
+            moves.append(move)
     most_common_move = Counter(moves).most_common(1)[0][0]
 
     return reasoning, most_common_move
@@ -191,7 +261,12 @@ def get_move_with_reflection(agent, remaining_items):
     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
     """
 
-    if agent["model"] == 'gemini-1.5-flash':
+    if agent["model"] == 'Llama3.1-8B-Instruct':
+        system_prompt = "You are a skilled Nim player."
+        response = say_model(system_prompt, prompt_initial)
+        content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+
+    elif agent["model"] == 'gemini-1.5-flash':
 
         # Create the model
         generation_config = {
@@ -217,7 +292,7 @@ def get_move_with_reflection(agent, remaining_items):
 
         content = response.text
 
-    else:
+    elif agent["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
         response_initial = client.chat.completions.create(
                 messages=[
                     {
@@ -257,7 +332,12 @@ def get_move_with_reflection(agent, remaining_items):
         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"feedback": string  // This is the feedback for the selected action and reasoning\n}}
         """
 
-        if agent["model"] == 'gemini-1.5-flash':
+        if agent["model"] == 'Llama3.1-8B-Instruct':
+            system_prompt = "You are a skilled Nim player."
+            response = say_model(system_prompt, feedback_prompt)
+            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+
+        elif agent["model"] == 'gemini-1.5-flash':
 
             generation_config = {
             "temperature": 0.7,
@@ -282,7 +362,7 @@ def get_move_with_reflection(agent, remaining_items):
 
             content = response.text
 
-        else:
+        elif agent["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
             feedback_response = client.chat.completions.create(
                     messages=[
                         {
@@ -318,7 +398,12 @@ def get_move_with_reflection(agent, remaining_items):
         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
         """
 
-        if agent["model"] == 'gemini-1.5-flash':
+        if agent["model"] == 'Llama3.1-8B-Instruct':
+            system_prompt = "You are a skilled Nim player."
+            response = say_model(system_prompt, refine_prompt)
+            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+
+        elif agent["model"] == 'gemini-1.5-flash':
 
             generation_config = {
             "temperature": 0.7,
@@ -343,7 +428,7 @@ def get_move_with_reflection(agent, remaining_items):
 
             content = response.text
 
-        else:
+        elif agent["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
             response_refined = client.chat.completions.create(
                     messages=[
                         {
@@ -393,9 +478,13 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
         """
 
-        if agent1["model"] == 'gemini-1.5-flash':
+        if agent1["model"] == 'Llama3.1-8B-Instruct':
+            system_prompt = "You are a skilled Nim player."
+            response = say_model(system_prompt, prompt_agent1)
+            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
 
-        # Create the model
+        elif agent1["model"] == 'gemini-1.5-flash':
+
             generation_config = {
             "temperature": 0.7,
             "top_p": 0.95,
@@ -419,7 +508,7 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
 
             content = response.text
 
-        else:
+        elif agent1["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
 
             response_agent1 = client.chat.completions.create(
                 messages=[
@@ -468,8 +557,12 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
         Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
         """
+        if agent1["model"] == 'Llama3.1-8B-Instruct':
+            system_prompt = "You are a skilled Nim player."
+            response = say_model(system_prompt, prompt_agent2)
+            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
 
-        if agent1["model"] == 'gemini-1.5-flash':
+        elif agent1["model"] == 'gemini-1.5-flash':
 
             # Create the model
             generation_config = {
@@ -495,7 +588,7 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
 
             content = response.text
 
-        else:
+        elif agent1["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
             response_agent2 = client.chat.completions.create(
                 messages=[
                     {
@@ -548,8 +641,12 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
     
     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
     """
+    if agent1["model"] == 'Llama3.1-8B-Instruct':
+        system_prompt = "You are a skilled Nim player."
+        response = say_model(system_prompt, final_prompt_agent1)
+        content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
 
-    if agent1["model"] == 'gemini-1.5-flash':
+    elif agent1["model"] == 'gemini-1.5-flash':
 
         # Create the model
         generation_config = {
@@ -575,7 +672,7 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
 
         content = response.text
     
-    else:
+    elif agent1["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
         final_response_agent1 = client.chat.completions.create(
                 messages=[
                     {
@@ -618,7 +715,12 @@ def get_move_with_debate(agent1, agent2, remaining_items):
         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
         """
 
-        if agent["model"] == 'gemini-1.5-flash':
+        if agent["model"] == 'Llama3.1-8B-Instruct':
+            system_prompt = "You are a skilled Nim player and debating the best move."
+            response = say_model(system_prompt, prompt)
+            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+
+        elif agent["model"] == 'gemini-1.5-flash':
 
             # Create the model
             generation_config = {
@@ -644,7 +746,7 @@ def get_move_with_debate(agent1, agent2, remaining_items):
 
             content = response.text
 
-        else:
+        elif agent["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
             response_initial = client.chat.completions.create(
                 messages=[
                     {
@@ -694,7 +796,12 @@ def get_move_with_debate(agent1, agent2, remaining_items):
             The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
             """
 
-            if agent["model"] == 'gemini-1.5-flash':
+            if agent["model"] == 'Llama3.1-8B-Instruct':
+                system_prompt = "You are a skilled Nim player and debating the best move."
+                response = say_model(system_prompt, prompt)
+                content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+
+            elif agent["model"] == 'gemini-1.5-flash':
 
                 # Create the model
                 generation_config = {
@@ -720,7 +827,7 @@ def get_move_with_debate(agent1, agent2, remaining_items):
 
                 content = response.text
             
-            else:
+            elif agent["model"] == 'gpt-4o' or 'gpt-4o-mini' or 'gpt-3.5-turbo':
                 response_initial = client.chat.completions.create(
                 messages=[
                     {
