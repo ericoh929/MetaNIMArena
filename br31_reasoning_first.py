@@ -44,14 +44,42 @@ self_consistency_count = 10  # Number of responses to use for self-consistency
 n_step_lookahead = 3  # Number of lookahead steps for n-step opponent modeling
 debate_rounds = 3  # Maximum number of debate rounds
 
-def _build_llama_model():
-    base_model = '/home/jihwan/LLM/local_model/llama3.1_8b/instruct'
-    llama_model = AutoModelForCausalLM.from_pretrained(
-            base_model,
-            device_map = 'auto'
-        )
-    llama_tokenizer = AutoTokenizer.from_pretrained(base_model)
-    return llama_model, llama_tokenizer
+def _build_model():
+    if args.agent1_model == 'llama':
+        base_model = '/home/jihwan/LLM/local_model/llama3.1_8b/instruct'
+        llama_model = AutoModelForCausalLM.from_pretrained(
+                base_model,
+                device_map = 'auto'
+            )
+        llama_tokenizer = AutoTokenizer.from_pretrained(base_model)
+        return llama_model, llama_tokenizer
+    
+    elif args.agent1_model == 'gemma':
+        base_model = 'google/gemma-2-9b-it'
+        gemma_model = AutoModelForCausalLM.from_pretrained(
+                base_model,
+                device_map = 'auto'
+            )
+        gemma_tokenizer = AutoTokenizer.from_pretrained(base_model)
+        return gemma_model, gemma_tokenizer
+    
+    elif args.agent1_model == 'qwen':
+        base_model = 'Qwen/Qwen2.5-7B-Instruct'
+        qwen_model = AutoModelForCausalLM.from_pretrained(
+                base_model,
+                device_map = 'auto'
+            )
+        qwen_tokenizer = AutoTokenizer.from_pretrained(base_model)
+        return qwen_model, qwen_tokenizer
+    
+    elif args.agent1_model == 'mistral':
+        base_model = 'mistralai/Mistral-7B-Instruct-v0.3'
+        mistral_model = AutoModelForCausalLM.from_pretrained(
+                base_model,
+                device_map = 'auto'
+            )
+        mistral_tokenizer = AutoTokenizer.from_pretrained(base_model)
+        return mistral_model, mistral_tokenizer
 
 # def llama_say(prompt):
 #     base_model = '/home/jihwan/LLM/local_model/llama3.1_8b/instruct'
@@ -74,14 +102,44 @@ def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
     
     return alpaca_format_str
 
-if args.agent1_model == 'Llama3.1-8B-Instruct':
-    model, tokenizer = _build_llama_model()
+
+model, tokenizer = _build_model()
 
 def say_model(system, instruction_str, model=model, tokenizer=tokenizer):
-    if args.agent1_model == 'Llama3.1-8B-Instruct':
+    if args.agent1_model == 'llama':
         inputs = tokenizer(convert_to_llama_format(system, instruction_str), return_tensors = "pt").to("cuda")
         outputs = model.generate(**inputs, max_new_tokens = 500, use_cache = True, temperature = 0.7, top_p = 0.95, pad_token_id = tokenizer.eos_token_id)
         return(tokenizer.batch_decode(outputs)[0])
+    
+    elif args.agent1_model == 'gemma':
+        # <bos><start_of_turn>user
+        # Write a hello world program<end_of_turn>
+        # <start_of_turn>model
+        messages = [
+        {"role": "user", "content": f"{system}\n{instruction_str}"},
+        ]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
+        outputs = model.generate(input_ids=inputs, max_new_tokens=500, temperature = 0.7, top_p = 0.95,)
+        return(tokenizer.batch_decode(outputs)[0])
+
+    elif args.agent1_model == 'qwen':
+        messages = [
+        {"role": "system", "content": f"{system}"},
+        {"role": "user", "content": f"{instruction_str}"}]
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
+        generated_ids = model.generate(**inputs, max_new_tokens=500, temperature = 0.7, top_p = 0.95,)
+        generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in zip(inputs.input_ids, generated_ids)]
+        return(tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0])
+    
+    elif args.agent1_model == 'mistral':
+        messages = [{"role": "user", "content": f"{system}\n{instruction_str}"},]
+        prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_dict=True, return_tensors="pt")
+        prompt.to("cuda")
+        outputs = model.generate(**prompt, max_new_tokens=500, temperature = 0.7, top_p = 0.95,)
+        # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
+        return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
 
 # Define agents with their respective models and prompting methods
 agents = [
@@ -96,12 +154,24 @@ def get_basic_move(agent, remaining_items):
     You can take between 1 and {max_take} items on your turn. The goal is to win by taking all remaining items on your turn, leaving no items for your opponent.
 
     Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
     """
     if agent["model"] == 'Llama3.1-8B-Instruct':
-        system_prompt = "You are a skilled Nim player."
-        response = say_model(system_prompt, prompt)
-        content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+        while True:
+            try:
+                system_prompt = "You are a skilled Nim player."
+                response = say_model(system_prompt, prompt)
+                content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                if parsed_content_with_braces:
+                    parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                    parsed_content = json.loads(parsed_content_with_braces)
+                break
+            
+            except (AttributeError, json.JSONDecodeError) as e:
+                print(f"Error encountered: {e}. Retrying...")
+                continue  # Retry by calling say_model again
 
     elif agent["model"] == 'gemini-1.5-flash':
 
@@ -147,6 +217,7 @@ def get_basic_move(agent, remaining_items):
 
     matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
     parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+    parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
 
     parsed_content = json.loads(parsed_content_with_braces)
 
@@ -162,19 +233,34 @@ def get_consistent_move(agent, remaining_items, num_responses):
     You can take between 1 and {max_take} items on your turn. The goal is to win by taking all remaining items on your turn, leaving no items for your opponent.
 
     Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
     """
     moves = []
 
     if agent["model"] == 'Llama3.1-8B-Instruct':
         for _ in range(num_responses):
-            system_prompt = "You are a skilled Nim player."
-            response = say_model(system_prompt, prompt)
+            while True:
+                try:
+                    system_prompt = "You are a skilled Nim player."
+                    response = say_model(system_prompt, prompt)
+                    content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                    matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                    parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                    if parsed_content_with_braces:
+                        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                        parsed_content = json.loads(parsed_content_with_braces)
+                    break
+                
+                except (AttributeError, json.JSONDecodeError) as e:
+                    print(f"Error encountered: {e}. Retrying...")
+                    continue  # Retry by calling say_model again
+        
             content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
 
             matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
             parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+            parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
 
             parsed_content = json.loads(parsed_content_with_braces)
 
@@ -211,6 +297,7 @@ def get_consistent_move(agent, remaining_items, num_responses):
             matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
             parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+            parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
 
             parsed_content = json.loads(parsed_content_with_braces)
 
@@ -240,6 +327,7 @@ def get_consistent_move(agent, remaining_items, num_responses):
             matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
             parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+            parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
 
             parsed_content = json.loads(parsed_content_with_braces)
 
@@ -258,13 +346,25 @@ def get_move_with_reflection(agent, remaining_items):
     You can take between 1 and {max_take} items on your turn. The goal is to win by taking all remaining items on your turn, leaving no items for your opponent.
 
     Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
     """
 
     if agent["model"] == 'Llama3.1-8B-Instruct':
-        system_prompt = "You are a skilled Nim player."
-        response = say_model(system_prompt, prompt_initial)
-        content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+        while True:
+            try:
+                system_prompt = "You are a skilled Nim player."
+                response = say_model(system_prompt, prompt_initial)
+                content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                if parsed_content_with_braces:
+                    parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                    parsed_content = json.loads(parsed_content_with_braces)
+                break
+            
+            except (AttributeError, json.JSONDecodeError) as e:
+                print(f"Error encountered: {e}. Retrying...")
+                continue  # Retry by calling say_model again
 
     elif agent["model"] == 'gemini-1.5-flash':
 
@@ -313,6 +413,8 @@ def get_move_with_reflection(agent, remaining_items):
     matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
     parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+    print('parsed_content:', parsed_content_with_braces)
+    parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
     parsed_content = json.loads(parsed_content_with_braces)
 
     initial_reasoning = parsed_content.get("reasoning")
@@ -333,9 +435,21 @@ def get_move_with_reflection(agent, remaining_items):
         """
 
         if agent["model"] == 'Llama3.1-8B-Instruct':
-            system_prompt = "You are a skilled Nim player."
-            response = say_model(system_prompt, feedback_prompt)
-            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+            while True:
+                try:
+                    system_prompt = "You are a skilled Nim player."
+                    response = say_model(system_prompt, feedback_prompt)
+                    content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                    matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                    parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                    if parsed_content_with_braces:
+                        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                        parsed_content = json.loads(parsed_content_with_braces)
+                    break
+                
+                except (AttributeError, json.JSONDecodeError) as e:
+                    print(f"Error encountered: {e}. Retrying...")
+                    continue  # Retry by calling say_model again
 
         elif agent["model"] == 'gemini-1.5-flash':
 
@@ -379,10 +493,11 @@ def get_move_with_reflection(agent, remaining_items):
                     )
             
             content = feedback_response.choices[0].message.content
-
+        
         matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
         parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
         parsed_content = json.loads(parsed_content_with_braces)
 
         feedback = parsed_content.get("feedback")
@@ -395,13 +510,25 @@ def get_move_with_reflection(agent, remaining_items):
 
         Based on the current state of the game and the feedback, refine your reasoning and action. 
         Finally, Decide how many items you will take between 1 and {max_take}.
-        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
         """
 
         if agent["model"] == 'Llama3.1-8B-Instruct':
-            system_prompt = "You are a skilled Nim player."
-            response = say_model(system_prompt, refine_prompt)
-            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+            while True:
+                try:
+                    system_prompt = "You are a skilled Nim player."
+                    response = say_model(system_prompt, refine_prompt)
+                    content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                    matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                    parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                    if parsed_content_with_braces:
+                        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                        parsed_content = json.loads(parsed_content_with_braces)
+                    break
+                
+                except (AttributeError, json.JSONDecodeError) as e:
+                    print(f"Error encountered: {e}. Retrying...")
+                    continue  # Retry by calling say_model again
 
         elif agent["model"] == 'gemini-1.5-flash':
 
@@ -449,6 +576,7 @@ def get_move_with_reflection(agent, remaining_items):
         matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
         parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
         parsed_content = json.loads(parsed_content_with_braces)
 
         refined_reasoning = parsed_content.get("reasoning")
@@ -475,13 +603,25 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
         You can take between 1 and {max_take} items on your turn. The goal is to win by taking all remaining items on your turn, leaving no items for your opponent.
 
         Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
-        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
         """
 
         if agent1["model"] == 'Llama3.1-8B-Instruct':
-            system_prompt = "You are a skilled Nim player."
-            response = say_model(system_prompt, prompt_agent1)
-            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+            while True:
+                try:
+                    system_prompt = "You are a skilled Nim player."
+                    response = say_model(system_prompt, prompt_agent1)
+                    content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                    matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                    parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                    if parsed_content_with_braces:
+                        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                        parsed_content = json.loads(parsed_content_with_braces)
+                    break
+                
+                except (AttributeError, json.JSONDecodeError) as e:
+                    print(f"Error encountered: {e}. Retrying...")
+                    continue  # Retry by calling say_model again
 
         elif agent1["model"] == 'gemini-1.5-flash':
 
@@ -530,6 +670,8 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
         matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
         parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+
         parsed_content = json.loads(parsed_content_with_braces)
 
         agent1_reasoning = parsed_content.get("reasoning")
@@ -555,12 +697,24 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
         You can take between 1 and {max_take} items on your turn. The goal is to win by taking all remaining items on your turn, leaving no items for your opponent.
 
         Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
-        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
         """
         if agent1["model"] == 'Llama3.1-8B-Instruct':
-            system_prompt = "You are a skilled Nim player."
-            response = say_model(system_prompt, prompt_agent2)
-            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+            while True:
+                try:
+                    system_prompt = "You are a skilled Nim player."
+                    response = say_model(system_prompt, prompt_agent2)
+                    content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                    matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                    parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                    if parsed_content_with_braces:
+                        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                        parsed_content = json.loads(parsed_content_with_braces)
+                    break
+                
+                except (AttributeError, json.JSONDecodeError) as e:
+                    print(f"Error encountered: {e}. Retrying...")
+                    continue  # Retry by calling say_model again
 
         elif agent1["model"] == 'gemini-1.5-flash':
 
@@ -609,6 +763,7 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
         matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
         parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
         parsed_content = json.loads(parsed_content_with_braces)
 
         agent2_reasoning = parsed_content.get("reasoning")
@@ -639,12 +794,24 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
 
     Based on the current state of the game, opponent's strategy, and simulated planning history, refine your action and decide again how many items you will take between 1 and {max_take} at the first time step when there are  {initial_remaining_items} items remaining in the pile.
     
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
     """
     if agent1["model"] == 'Llama3.1-8B-Instruct':
-        system_prompt = "You are a skilled Nim player."
-        response = say_model(system_prompt, final_prompt_agent1)
-        content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+        while True:
+            try:
+                system_prompt = "You are a skilled Nim player."
+                response = say_model(system_prompt, final_prompt_agent1)
+                content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                if parsed_content_with_braces:
+                    parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                    parsed_content = json.loads(parsed_content_with_braces)
+                break
+            
+            except (AttributeError, json.JSONDecodeError) as e:
+                print(f"Error encountered: {e}. Retrying...")
+                continue  # Retry by calling say_model again
 
     elif agent1["model"] == 'gemini-1.5-flash':
 
@@ -693,6 +860,7 @@ def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
     matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
     parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+    parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
     parsed_content = json.loads(parsed_content_with_braces)
 
     agent1_reasoning = parsed_content.get("reasoning")
@@ -712,13 +880,25 @@ def get_move_with_debate(agent1, agent2, remaining_items):
         You can take between 1 and {max_take} items on your turn. The goal is to win by taking all remaining items on your turn, leaving no items for your opponent.
 
         Based on the current state of the game, decide how many items you will take between 1 and {max_take}.
-        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
         """
 
         if agent["model"] == 'Llama3.1-8B-Instruct':
-            system_prompt = "You are a skilled Nim player and debating the best move."
-            response = say_model(system_prompt, prompt)
-            content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+            while True:
+                try:
+                    system_prompt = "You are a skilled Nim player and debating th best move."
+                    response = say_model(system_prompt, prompt)
+                    content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                    matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                    parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                    if parsed_content_with_braces:
+                        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                        parsed_content = json.loads(parsed_content_with_braces)
+                    break
+                
+                except (AttributeError, json.JSONDecodeError) as e:
+                    print(f"Error encountered: {e}. Retrying...")
+                    continue  # Retry by calling say_model again
 
         elif agent["model"] == 'gemini-1.5-flash':
 
@@ -767,6 +947,7 @@ def get_move_with_debate(agent1, agent2, remaining_items):
         matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
         parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+        parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
         parsed_content = json.loads(parsed_content_with_braces)
 
         initial_reasoning = parsed_content.get("reasoning")
@@ -793,13 +974,25 @@ def get_move_with_debate(agent1, agent2, remaining_items):
 
             Other agent argues that you have to choose move as: {initial_moves[other["name"]]} by the reason: {initial_reasonings[other["name"]]}. 
             Considering the other's opinion, refine or confirm your move. Decide how many items you will take between 1 and {max_take}.
-            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer.\n}}
+            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take. Only provide integer between 1 and 3.\n}}
             """
 
             if agent["model"] == 'Llama3.1-8B-Instruct':
-                system_prompt = "You are a skilled Nim player and debating the best move."
-                response = say_model(system_prompt, prompt)
-                content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                while True:
+                    try:
+                        system_prompt = "You are a skilled Nim player and debating the best move."
+                        response = say_model(system_prompt, prompt)
+                        content = response.split("<|start_header_id|>assistant<|end_header_id|>\n")[1]
+                        matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+                        parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+                        if parsed_content_with_braces:
+                            parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
+                            parsed_content = json.loads(parsed_content_with_braces)
+                        break
+                    
+                    except (AttributeError, json.JSONDecodeError) as e:
+                        print(f"Error encountered: {e}. Retrying...")
+                        continue  # Retry by calling say_model again
 
             elif agent["model"] == 'gemini-1.5-flash':
 
@@ -848,6 +1041,7 @@ def get_move_with_debate(agent1, agent2, remaining_items):
             matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
 
             parsed_content_with_braces = matches_with_braces.group(0) if matches_with_braces else None
+            parsed_content_with_braces = parsed_content_with_braces.replace('\xa0', '').strip()
             parsed_content = json.loads(parsed_content_with_braces)
 
             initial_reasoning = parsed_content.get("reasoning")
