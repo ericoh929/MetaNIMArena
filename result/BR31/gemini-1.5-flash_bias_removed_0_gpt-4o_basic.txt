@@ -1,0 +1,20 @@
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/br31_reasoning_first.py", line 10, in <module>
+    import transformers
+ModuleNotFoundError: No module named 'transformers'
+
+Starting Game 1
+
+Starting Game 1
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/br31_reasoning_first.py", line 2153, in <module>
+    simulate_games(num_games, total_items, max_take)
+  File "/home/jihwan/NashIP/br31_reasoning_first.py", line 2145, in simulate_games
+    winner = play_nim_game(total_items, max_take, verbose=True)
+  File "/home/jihwan/NashIP/br31_reasoning_first.py", line 2120, in play_nim_game
+    reasoning, move = bias_removed(current_agent, current_items)
+  File "/home/jihwan/NashIP/br31_reasoning_first.py", line 1526, in bias_removed
+    content = response.choices[0].message.content
+AttributeError: 'GenerateContentResponse' object has no attribute 'choices'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1733842427.835687 1990027 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.
