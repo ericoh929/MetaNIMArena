@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Define the list of configurations for each parameter
-AGENT1_MODELS=("gpt-4o-mini")
+AGENT1_MODELS=("gemini-1.5-flash")
 AGENT2_MODELS=("gpt-4o")
-AGENT1_PROMPTS=("original_vs_harmonized_debate") #("bias_mitigate_debate") #
+AGENT1_PROMPTS=("dreamad") #("bias_mitigate_debate") #
 AGENT2_PROMPTS=("basic")
-LOOK_AHEAD_VALUES=(3)
-NUM_GAMES_VALUES=(5)
+LOOK_AHEAD_VALUES=(0)
+NUM_GAMES_VALUES=(50)
 
 # Output directory for logs
 OUTPUT_DIR="/home/jihwan/NashIP/result/BR20"

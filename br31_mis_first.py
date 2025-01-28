@@ -16,7 +16,7 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '4, 5'
 
 import os
 import google.generativeai as genai
-genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+genai.configure(api_key='AIzaSyCYkix3fQio-WpUus7ziwNGhSk6qZp7LJs')
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),)
 
@@ -117,48 +117,12 @@ def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
 #         # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
 #         return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
 
-def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."):
-    """
-    Handles responses for different models based on the agent's configuration.
-
-    Parameters:
-        agent (dict): Dictionary containing agent details, including the model name.
-        prompt (str): The input prompt for the model.
-        system_prompt (str): The system-level instruction for the model.
-
-    Returns:
-        dict: Parsed content from the model's response in JSON format, or None if parsing fails.
-    """
-    def parse_content(response, split_key):
-        try:
-            if split_key not in response:
-                return None
-            content = response.split(split_key)[1]
-            matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
-            parsed_content_with_braces = matches_with_braces.group(0).replace('\xa0', '').strip() if matches_with_braces else None
-            return json.loads(parsed_content_with_braces) if parsed_content_with_braces else None
-        except (AttributeError, json.JSONDecodeError, IndexError):
-            return None
-
+def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.", temperature = 0.7):
     while True:
         try:
-            if agent["model"] == "llama":
-                split_key = "<|start_header_id|>assistant<|end_header_id|>\n"
-                response = say_model(system_prompt, prompt)
-                parsed_content = parse_content(response, split_key)
-                if parsed_content:
-                    return parsed_content
-
-            elif agent["model"] == "gemma":
-                split_key = "<start_of_turn>model\n"
-                response = say_model(system_prompt, prompt)
-                parsed_content = parse_content(response, split_key)
-                if parsed_content:
-                    return parsed_content
-
-            elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
+            if agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"]:
                 generation_config = {
-                    "temperature": 0.7,
+                    "temperature": temperature,
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 8192,
@@ -176,14 +140,14 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                 except json.JSONDecodeError:
                     print("Error decoding JSON for gemini model. Retrying...")
 
-            elif agent["model"] in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]:
+            elif agent["model"] in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]:
                 response = client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt},
                     ],
                     model=agent["model"],
-                    temperature=0.7,
+                    temperature=temperature,
                 )
                 content = response.choices[0].message.content
                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
@@ -198,6 +162,88 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
         except Exception as e:
             print(f"Unexpected error: {e}. Retrying...")
 
+
+# def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."):
+#     """
+#     Handles responses for different models based on the agent's configuration.
+
+#     Parameters:
+#         agent (dict): Dictionary containing agent details, including the model name.
+#         prompt (str): The input prompt for the model.
+#         system_prompt (str): The system-level instruction for the model.
+
+#     Returns:
+#         dict: Parsed content from the model's response in JSON format, or None if parsing fails.
+#     """
+#     def parse_content(response, split_key):
+#         try:
+#             if split_key not in response:
+#                 return None
+#             content = response.split(split_key)[1]
+#             matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+#             parsed_content_with_braces = matches_with_braces.group(0).replace('\xa0', '').strip() if matches_with_braces else None
+#             return json.loads(parsed_content_with_braces) if parsed_content_with_braces else None
+#         except (AttributeError, json.JSONDecodeError, IndexError):
+#             return None
+
+#     while True:
+#         try:
+#             if agent["model"] == "llama":
+#                 split_key = "<|start_header_id|>assistant<|end_header_id|>\n"
+#                 response = say_model(system_prompt, prompt)
+#                 parsed_content = parse_content(response, split_key)
+#                 if parsed_content:
+#                     return parsed_content
+
+#             elif agent["model"] == "gemma":
+#                 split_key = "<start_of_turn>model\n"
+#                 response = say_model(system_prompt, prompt)
+#                 parsed_content = parse_content(response, split_key)
+#                 if parsed_content:
+#                     return parsed_content
+
+#             elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
+#                 generation_config = {
+#                     "temperature": 0.7,
+#                     "top_p": 0.95,
+#                     "top_k": 40,
+#                     "max_output_tokens": 8192,
+#                     "response_mime_type": "application/json",
+#                 }
+#                 model = genai.GenerativeModel(
+#                     model_name=agent["model"],
+#                     generation_config=generation_config,
+#                     system_instruction=system_prompt,
+#                 )
+#                 chat_session = model.start_chat(history=[])
+#                 response = chat_session.send_message(prompt)
+#                 try:
+#                     return json.loads(response.text)
+#                 except json.JSONDecodeError:
+#                     print("Error decoding JSON for gemini model. Retrying...")
+
+#             elif agent["model"] in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]:
+#                 response = client.chat.completions.create(
+#                     messages=[
+#                         {"role": "system", "content": system_prompt},
+#                         {"role": "user", "content": prompt},
+#                     ],
+#                     model=agent["model"],
+#                     temperature=0.7,
+#                 )
+#                 content = response.choices[0].message.content
+#                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
+#                 if parsed_content:
+#                     return parsed_content
+
+#             print("Error encountered. Retrying in 2 seconds...")
+#             time.sleep(2)  # Delay to prevent rapid retries
+#         except KeyboardInterrupt:
+#             print("Process interrupted by user.")
+#             return None
+#         except Exception as e:
+#             print(f"Unexpected error: {e}. Retrying...")
+
 agents = [
     {"name": "Agent 1", "model": args.agent1_model, "prompting_method": args.agent1_prompt},
     {"name": "Agent 2", "model": args.agent2_model, "prompting_method": args.agent2_prompt}
@@ -206,7 +252,7 @@ agents = [
 # Function for basic move (single-response without consistency or modeling)
 def get_basic_move(agent, remaining_items):
     prompt = f"""
-    #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+    #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
     #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
     #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
     #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
@@ -228,7 +274,7 @@ def get_basic_move(agent, remaining_items):
 # Function for self-consistency: generate multiple responses and choose the most common move
 def get_consistent_move(agent, remaining_items, num_responses):
     prompt = f"""
-    #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+    #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
     #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
     #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
     #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
@@ -257,7 +303,7 @@ def get_consistent_move(agent, remaining_items, num_responses):
 # Function for self-reflection prompting
 def get_move_with_reflection(agent, remaining_items):
     prompt_initial = f"""
-    #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+    #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
     #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
     #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
     #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
@@ -276,7 +322,7 @@ def get_move_with_reflection(agent, remaining_items):
     for k in range(num_refine):
 
         feedback_prompt = f"""
-        #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+        #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
         #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
         #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
@@ -290,7 +336,7 @@ def get_move_with_reflection(agent, remaining_items):
         feedback = parsed_content.get("feedback")
 
         refine_prompt = f"""
-        #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+        #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
         #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
         #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
@@ -641,7 +687,7 @@ def get_move_with_debate(agent1, agent2, remaining_items):
         for agent in [agent1, agent2]:
             if i == 0:
                 prompt = f"""
-                #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+                #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
                 #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
                 #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
                 #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
@@ -655,7 +701,7 @@ def get_move_with_debate(agent1, agent2, remaining_items):
                 """
             if i == 1:
                 prompt = f"""
-                #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+                #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
                 #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
                 #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
                 #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
@@ -673,18 +719,196 @@ def get_move_with_debate(agent1, agent2, remaining_items):
             initial_reasoning = parsed_content.get("reasoning")
             initial_action = parsed_content.get("action")
             if i == 0:
-                initial_moves['agent1'] = initial_action
-                initial_reasonings['agent1'] = initial_reasoning
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
             if i == 1:
-                initial_moves['agent2'] = initial_action
-                initial_reasonings['agent2'] = initial_reasoning
-
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
             i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
 
         if len(set(initial_moves.values())) == 1:
             return initial_reasoning, initial_action
 
     return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+
+def get_move_dreamad(agent1, agent2, remaining_items):
+    initial_moves = {}
+    initial_reasonings = {}
+    i = 0
+    for agent in [agent1]:
+        prompt = f"""
+        #Game Role:\n You are {agent['name']}, a participant in a game of Nim-Misere variants.\n\n
+        #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
+        #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
+        #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
+        #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
+        """
+
+        game_prompt = f"""
+        Below is a game description. Extract key information.
+
+        **Game Description:**
+        {prompt}
+
+        ### Format Response as:
+        {{
+        "game_type": "string", // Name of the game (if identifiable).
+        "winning_condition": "string", // How to win the game.
+        "move_constraints": "string" // What actions are allowed per turn.
+        }}
+        """
+    
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+        game_type = parsed_content.get("game_type")
+        winning_condition = parsed_content.get("winning_condition")
+        move_constraints = parsed_content.get("move_constraints")
+
+
+        strategy_prompt = f"""
+        Based on the game information below, derive the **optimal strategy**.
+
+        **Game:** {game_type}  
+        **Winning Condition:** {winning_condition}  
+        **Move Constraints:** {move_constraints}
+
+        ### Format Response as:
+        {{
+        "state_evaluation": "string", // How to assess the game state.
+        "winning_strategy": "string", // Winning strategy in this turn to win this game.
+        "endgame_tactics": "string" // Best strategy in a near-win situation.}}
+        """
+        # print("Strategy Prompt: ", strategy_prompt)
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+        # print(2)
+
+        state_evaluation = parsed_content.get("state_evaluation")
+        winning_strategy = parsed_content.get("winning_strategy")
+        endgame_tactics = parsed_content.get("endgame_tactics")
+
+
+    for agent in [agent1, agent2]:
+
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
+
+        **Game:** {game_type}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
+
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
+
+        ### Format Response as:
+
+        {{
+        "optimized_prompt": "string", // The refined prompt that clearly directs decision-making. }}
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
+
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        one_new_prompt = f"""{optimized_prompt}\n
+
+        **Current State:**  
+        - There are {remaining_items} items left.  
+        - You can take 1 to 3 items per turn. 
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
+
+        ### Format Response as:
+        {{
+        "reasoning": "string", // Explanation of the move based on the strategy.
+        "action": integer // Chosen move (1, 2, or 3). }}
+        """
+        # print("One New Prompt: ", one_new_prompt)
+        one_parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a game theorist and strategist.")
+        # print(4)
+        one_reasoning = one_parsed_content.get("reasoning")
+        one_action = one_parsed_content.get("action")
+
+        if i == 0:
+            initial_moves['agent1'] = one_action
+            initial_reasonings['agent1'] = one_reasoning
+            one_prompt = optimized_prompt
+        if i == 1:
+            initial_moves['agent2'] = one_action
+            initial_reasonings['agent2'] = one_reasoning
+            two_prompt = optimized_prompt
+
+        i += 1
+
+    for _ in range(debate_rounds):
+        i = 0
+        for agent in [agent1, agent2]:
+            
+            if i == 0:
+                prompt = f"""
+                {one_prompt}\n
+
+                You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
+                """
+            if i == 1:
+                prompt = f"""
+                {two_prompt}\n
+
+                You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
+                """
+
+            parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Game player and debating the best move.")
+
+            initial_reasoning = parsed_content.get("reasoning")
+            initial_action = parsed_content.get("action")
+            if i == 0:
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
+            if i == 1:
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
+            i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
+            
+        if len(set(initial_moves.values())) == 1:
+            return initial_reasoning, initial_action
+
+    return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+
 
 def get_move_with_bias_mitigate_debate(agent1, agent2, remaining_items):
     initial_moves = {}
@@ -908,6 +1132,8 @@ def play_nim_game(total_items, max_take, verbose=False):
                 reasoning, move = get_move_with_reflection(current_agent, current_items)
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, current_items)
+            elif current_agent["prompting_method"] == "dreamad":
+                reasoning, move = get_move_dreamad(current_agent, current_agent, current_items)
             elif current_agent["prompting_method"] == "self_play_debate":
                 reasoning, move = self_play_debate(current_agent, other_agent, current_items, n_step_lookahead)
             elif current_agent["prompting_method"] == "self_play_debate_exp":

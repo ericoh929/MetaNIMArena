@@ -10,6 +10,7 @@ import torch
 import transformers
 import time
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from pathlib import Path
 
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '4, 5'
@@ -29,6 +30,7 @@ parser.add_argument('--agent2_model',     type=str,   default=None, help='model'
 parser.add_argument('--agent1_prompt',     type=str,   default='basic', help='prompt_method')
 parser.add_argument('--agent2_prompt',     type=str,   default='basic', help='prompt_method')
 parser.add_argument('--num_games',     type=int,   default='50', help='prompt_method')
+parser.add_argument('--look_ahead',     type=int,   default='0', help='prompt_method')
 
 args = parser.parse_args()
 
@@ -63,101 +65,65 @@ def _build_model():
     return model, tokenizer
 
 if args.agent1_model == 'llama' or args.agent1_model == 'gemma' or args.agent1_model == 'qwen' or args.agent1_model == 'mistral':
-    print(True)
+    print("Small Language Models: ", args.agent1_model)
     model, tokenizer = _build_model()
 
-def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
-    alpaca_format_str = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+    def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
+        alpaca_format_str = f"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
 
-    {system} <|eot_id|>
-    <|start_header_id|>user<|end_header_id|>
+        {system} <|eot_id|>
+        <|start_header_id|>user<|end_header_id|>
 
-    {instruction}<|eot_id|>
-    <|start_header_id|>assistant<|end_header_id|>
-    """
-    return alpaca_format_str
+        {instruction}<|eot_id|>
+        <|start_header_id|>assistant<|end_header_id|>
+        """
+        return alpaca_format_str
 
-# def say_model(system, instruction_str, model=model, tokenizer=tokenizer):
-#     if args.agent1_model == 'llama':
-#         inputs = tokenizer(convert_to_llama_format(system, instruction_str), return_tensors = "pt").to("cuda")
-#         if args.agent1_prompt == 'self_consistency':
-#             outputs = model.generate(**inputs, max_new_tokens = 500, use_cache = True, temperature = 0.7, top_p = 0.95, pad_token_id = tokenizer.eos_token_id)
-#         else:
-#             outputs = model.generate(**inputs, max_new_tokens = 500, use_cache = True, temperature = 0.7, top_p = 0.95, pad_token_id = tokenizer.eos_token_id)
-#         return(tokenizer.batch_decode(outputs)[0])
-    
-#     elif args.agent1_model == 'gemma':
-#         # <bos><start_of_turn>user
-#         # Write a hello world program<end_of_turn>
-#         # <start_of_turn>model
-#         messages = [
-#         {"role": "user", "content": f"{system}\n{instruction_str}"},
-#         ]
-#         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-#         inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
-#         outputs = model.generate(input_ids=inputs, max_new_tokens=500,)
-#         return(tokenizer.batch_decode(outputs)[0])
+    def say_model(system, instruction_str, model=model, tokenizer=tokenizer):
+        if args.agent1_model == 'llama':
+            inputs = tokenizer(convert_to_llama_format(system, instruction_str), return_tensors = "pt").to("cuda")
+            if args.agent1_prompt == 'self_consistency':
+                outputs = model.generate(**inputs, max_new_tokens = 500, use_cache = True, temperature = 0.7, top_p = 0.95, pad_token_id = tokenizer.eos_token_id)
+            else:
+                outputs = model.generate(**inputs, max_new_tokens = 500, use_cache = True, temperature = 0.7, top_p = 0.95, pad_token_id = tokenizer.eos_token_id)
+            return(tokenizer.batch_decode(outputs)[0])
+        
+        elif args.agent1_model == 'gemma':
+            # <bos><start_of_turn>user
+            # Write a hello world program<end_of_turn>
+            # <start_of_turn>model
+            messages = [
+            {"role": "user", "content": f"{system}\n{instruction_str}"},
+            ]
+            prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
+            outputs = model.generate(input_ids=inputs, max_new_tokens=500,)
+            return(tokenizer.batch_decode(outputs)[0])
 
-#     elif args.agent1_model == 'qwen':
-#         messages = [
-#         {"role": "system", "content": f"{system}"},
-#         {"role": "user", "content": f"{instruction_str}"}]
-#         prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-#         inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
-#         generated_ids = model.generate(**inputs, max_new_tokens=500, temperature = 0.7, top_p = 0.95,)
-#         generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in zip(inputs.input_ids, generated_ids)]
-#         return(tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0])
-    
-#     elif args.agent1_model == 'mistral':
-#         messages = [{"role": "user", "content": f"{system}\n{instruction_str}"},]
-#         prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_dict=True, return_tensors="pt")
-#         prompt.to("cuda")
-#         outputs = model.generate(**prompt, max_new_tokens=500, temperature = 0.7, top_p = 0.95,)
-#         # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
-#         return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
+        elif args.agent1_model == 'qwen':
+            messages = [
+            {"role": "system", "content": f"{system}"},
+            {"role": "user", "content": f"{instruction_str}"}]
+            prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+            inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
+            generated_ids = model.generate(**inputs, max_new_tokens=500, temperature = 0.7, top_p = 0.95,)
+            generated_ids = [output_ids[len(input_ids):] for input_ids, output_ids in zip(inputs.input_ids, generated_ids)]
+            return(tokenizer.batch_decode(generated_ids, skip_special_tokens=True)[0])
+        
+        elif args.agent1_model == 'mistral':
+            messages = [{"role": "user", "content": f"{system}\n{instruction_str}"},]
+            prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, return_dict=True, return_tensors="pt")
+            prompt.to("cuda")
+            outputs = model.generate(**prompt, max_new_tokens=500, temperature = 0.7, top_p = 0.95,)
+            # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
+            return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
 
-def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."):
-    """
-    Handles responses for different models based on the agent's configuration.
-
-    Parameters:
-        agent (dict): Dictionary containing agent details, including the model name.
-        prompt (str): The input prompt for the model.
-        system_prompt (str): The system-level instruction for the model.
-
-    Returns:
-        dict: Parsed content from the model's response in JSON format, or None if parsing fails.
-    """
-    def parse_content(response, split_key):
-        try:
-            if split_key not in response:
-                return None
-            content = response.split(split_key)[1]
-            matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
-            parsed_content_with_braces = matches_with_braces.group(0).replace('\xa0', '').strip() if matches_with_braces else None
-            return json.loads(parsed_content_with_braces) if parsed_content_with_braces else None
-        except (AttributeError, json.JSONDecodeError, IndexError):
-            return None
-
+def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.", temperature = 0.7):
     while True:
         try:
-            if agent["model"] == "llama":
-                split_key = "<|start_header_id|>assistant<|end_header_id|>\n"
-                response = say_model(system_prompt, prompt)
-                parsed_content = parse_content(response, split_key)
-                if parsed_content:
-                    return parsed_content
-
-            elif agent["model"] == "gemma":
-                split_key = "<start_of_turn>model\n"
-                response = say_model(system_prompt, prompt)
-                parsed_content = parse_content(response, split_key)
-                if parsed_content:
-                    return parsed_content
-
-            elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
+            if agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-1.0-pro"]:
                 generation_config = {
-                    "temperature": 0.7,
+                    "temperature": temperature,
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 8192,
@@ -175,14 +141,14 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                 except json.JSONDecodeError:
                     print("Error decoding JSON for gemini model. Retrying...")
 
-            elif agent["model"] in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]:
+            elif agent["model"] in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo", "gpt-4", "gpt-4-turbo"]:
                 response = client.chat.completions.create(
                     messages=[
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": prompt},
                     ],
                     model=agent["model"],
-                    temperature=0.7,
+                    temperature=temperature,
                 )
                 content = response.choices[0].message.content
                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
@@ -197,6 +163,87 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
         except Exception as e:
             print(f"Unexpected error: {e}. Retrying...")
 
+# def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."): #llama, gemma, qwen, mistral 
+#     """
+#     Handles responses for different models based on the agent's configuration.
+
+#     Parameters:
+#         agent (dict): Dictionary containing agent details, including the model name.
+#         prompt (str): The input prompt for the model.
+#         system_prompt (str): The system-level instruction for the model.
+
+#     Returns:
+#         dict: Parsed content from the model's response in JSON format, or None if parsing fails.
+#     """
+#     def parse_content(response, split_key):
+#         try:
+#             if split_key not in response:
+#                 return None
+#             content = response.split(split_key)[1]
+#             matches_with_braces = re.search(r'\{.*?\}', content, re.DOTALL)
+#             parsed_content_with_braces = matches_with_braces.group(0).replace('\xa0', '').strip() if matches_with_braces else None
+#             return json.loads(parsed_content_with_braces) if parsed_content_with_braces else None
+#         except (AttributeError, json.JSONDecodeError, IndexError):
+#             return None
+
+#     while True:
+#         try:
+#             if agent["model"] == "llama":
+#                 split_key = "<|start_header_id|>assistant<|end_header_id|>\n"
+#                 response = say_model(system_prompt, prompt)
+#                 parsed_content = parse_content(response, split_key)
+#                 if parsed_content:
+#                     return parsed_content
+
+#             elif agent["model"] == "gemma":
+#                 split_key = "<start_of_turn>model\n"
+#                 response = say_model(system_prompt, prompt)
+#                 parsed_content = parse_content(response, split_key)
+#                 if parsed_content:
+#                     return parsed_content
+
+#             elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
+#                 generation_config = {
+#                     "temperature": 0.7,
+#                     "top_p": 0.95,
+#                     "top_k": 40,
+#                     "max_output_tokens": 8192,
+#                     "response_mime_type": "application/json",
+#                 }
+#                 model = genai.GenerativeModel(
+#                     model_name=agent["model"],
+#                     generation_config=generation_config,
+#                     system_instruction=system_prompt,
+#                 )
+#                 chat_session = model.start_chat(history=[])
+#                 response = chat_session.send_message(prompt)
+#                 try:
+#                     return json.loads(response.text)
+#                 except json.JSONDecodeError:
+#                     print("Error decoding JSON for gemini model. Retrying...")
+
+#             elif agent["model"] in ["gpt-4o", "gpt-4o-mini", "gpt-3.5-turbo"]:
+#                 response = client.chat.completions.create(
+#                     messages=[
+#                         {"role": "system", "content": system_prompt},
+#                         {"role": "user", "content": prompt},
+#                     ],
+#                     model=agent["model"],
+#                     temperature=0.7,
+#                 )
+#                 content = response.choices[0].message.content
+#                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
+#                 if parsed_content:
+#                     return parsed_content
+
+#             print("Error encountered. Retrying in 2 seconds...")
+#             time.sleep(2)  # Delay to prevent rapid retries
+#         except KeyboardInterrupt:
+#             print("Process interrupted by user.")
+#             return None
+#         except Exception as e:
+#             print(f"Unexpected error: {e}. Retrying...")
+
 
 agents = [
     {"name": "Agent 1", "model": args.agent1_model, "prompting_method": args.agent1_prompt},
@@ -205,6 +252,9 @@ agents = [
 
 # Function for basic move (single-response without consistency or modeling)
 def get_basic_move(agent, remaining_items):
+    json_file_path = f'/home/jihwan/NashIP/result/BR31/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.json'
+    Path(json_file_path).parent.mkdir(parents=True, exist_ok=True)
+    # with open(f'/home/jihwan/NashIP/result/BR31/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
     prompt = f"""
     #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
     #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
@@ -214,6 +264,7 @@ def get_basic_move(agent, remaining_items):
 
     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
     """
+
     parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.")
 
     reasoning = parsed_content.get("reasoning")
@@ -222,6 +273,30 @@ def get_basic_move(agent, remaining_items):
         action = 3
     if int(action) < 1:
         action = 1
+
+    data_to_append = {
+            "prompt": prompt.strip(),
+            "reasoning": reasoning,
+            "action": action
+        }
+
+    # Append the data to the JSON file
+    if Path(json_file_path).exists():
+        # If the file exists, load the existing data and append new data
+        with open(json_file_path, 'r') as json_file:
+            existing_data = json.load(json_file)
+            if isinstance(existing_data, list):
+                existing_data.append(data_to_append)
+            else:
+                existing_data = [existing_data, data_to_append]
+    else:
+        # If the file doesn't exist, start with the new data
+        existing_data = [data_to_append]
+
+    # Save the updated data back to the file
+    with open(json_file_path, 'w') as json_file:
+        json.dump(existing_data, json_file, indent=4)
+
 
     return reasoning, action
 
@@ -239,7 +314,7 @@ def get_consistent_move(agent, remaining_items, num_responses):
     moves = []
 
     for _ in range(num_responses):
-        parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.")
+        parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.", temperature=1.0)
         reasoning = parsed_content.get("reasoning")
         action = parsed_content.get("action")
 
@@ -679,13 +754,171 @@ def get_move_with_debate(agent1, agent2, remaining_items):
             initial_reasoning = parsed_content.get("reasoning")
             initial_action = parsed_content.get("action")
             if i == 0:
-                initial_moves['agent1'] = initial_action
-                initial_reasonings['agent1'] = initial_reasoning
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
             if i == 1:
-                initial_moves['agent2'] = initial_action
-                initial_reasonings['agent2'] = initial_reasoning
-
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
             i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
+            
+        if len(set(initial_moves.values())) == 1:
+            return initial_reasoning, initial_action
+
+    return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+
+def get_move_dreamad(agent1, agent2, remaining_items):
+    initial_moves = {}
+    initial_reasonings = {}
+    i = 0
+    for agent in [agent1, agent2]:
+        prompt = f"""
+        #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+        #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
+        #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
+        #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
+        #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n
+        """
+        #################prompt1#################
+        game_prompt = f"""I give you a content of a game. Given below content, guess what the game is in a sentence.\n
+        Content: {prompt}\n\n
+        Format the response as a markdown code snippet with the following schema:\n
+        {{
+        "game": "string",     // A response to the instruction in a sentence.
+        }}
+        """
+
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+        game = parsed_content.get("game")
+
+        strategy_prompt = f"""Given below game, what is general winning strategy to win the game?\n
+        Game: {game}\n\n
+        Format the response as a markdown code snippet with the following schema:\n
+        {{
+        "winning_strategy": "string",     // A winning strategy for the game.
+        }}
+        """
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+        
+        strategy = parsed_content.get("winning_strategy")
+        # print("Game: ", game)
+        # print("Strategy: ", strategy)
+
+        final_prompt = f"""You are an expert strategist in game theory. Below is the game definition, rules, and the current situation. Your task is to refine the initial prompt for clarity and optimal decision-making.\n\n
+
+        Game Definition: {game}\n
+        General Strategy: {strategy}\n
+        Initial Prompt:\n {prompt}
+
+        Key Instructions:\n
+        - First, check if there is a move that results in an immediate win within the action selection rules. If such a move exists, you MUST select it. No exceptions.\n
+        - If no immediate win is possible, choose the best move that maximizes future success following the general strategy.\n
+        - Do not blindly follow general strategies—adapt based on the current game state.\n
+        - Ensure that the language is clear, direct, and forces the model to prioritize winning actions.\n\n
+
+        Do NOT include the action or reasoning in the optimized prompt!\n
+
+        Format the response as a markdown code snippet:\n
+        {{
+        "analysis": "string",     // Briefly summarize issues or improvements in the initial prompt.
+        "optimized_prompt": "string"  // The refined prompt that clearly directs decision-making.
+        }}
+        """
+
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
+        analysis = parsed_content.get("analysis")
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        #################output#################
+
+        new_prompt = f"""{optimized_prompt}\n
+        Reasoning Guidelines:\n
+        To maintain a fair and neutral discussion, please follow these guidelines in your reasoning:\n
+        1. Use neutral and objective language. Avoid words or phrases that convey certainty or forcefulness, such as "must," "definitely," or "absolutely."\n
+        2. Avoid implying any emotional or assertive tone in your reasoning. The goal is to ensure the reasoning feels balanced and thoughtful.\n\n
+        The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
+        """
+        one_parsed_content = get_agent_response(agent, new_prompt, system_prompt="You are a skilled game player.")
+        one_reasoning = one_parsed_content.get("reasoning")
+        one_action = one_parsed_content.get("action")
+        # print('action', one_action)
+        # print('reasoning', one_reasoning)
+        if i == 0:
+            initial_moves['agent1'] = one_action
+            initial_reasonings['agent1'] = one_reasoning
+            one_prompt = optimized_prompt
+        if i == 1:
+            initial_moves['agent2'] = one_action
+            initial_reasonings['agent2'] = one_reasoning
+            two_prompt = optimized_prompt
+
+        i += 1
+
+    for _ in range(debate_rounds):
+        i = 0
+        for agent in [agent1, agent2]:
+            
+            if i == 0:
+                prompt = f"""
+                {one_prompt}\n
+
+                You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                # Reasoning Guidelines:
+                To maintain a fair and neutral discussion, please follow these guidelines in your reasoning:
+                1. Use neutral and objective language. Avoid words or phrases that convey certainty or forcefulness, such as "must," "definitely," or "absolutely."
+                2. Avoid implying any emotional or assertive tone in your reasoning. The goal is to ensure the reasoning feels balanced and thoughtful.
+
+                The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
+                """
+            if i == 1:
+                prompt = f"""
+                {two_prompt}\n
+
+                You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                # Reasoning Guidelines:
+                To maintain a fair and neutral discussion, please follow these guidelines in your reasoning:
+                1. Use neutral and objective language. Avoid words or phrases that convey certainty or forcefulness, such as "must," "definitely," or "absolutely."
+                2. Avoid implying any emotional or assertive tone in your reasoning. The goal is to ensure the reasoning feels balanced and thoughtful.
+
+                The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
+                """
+
+            parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Game player and debating the best move.")
+
+            initial_reasoning = parsed_content.get("reasoning")
+            initial_action = parsed_content.get("action")
+            if i == 0:
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
+            if i == 1:
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
+            i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
             
         if len(set(initial_moves.values())) == 1:
             return initial_reasoning, initial_action
@@ -914,6 +1147,8 @@ def play_nim_game(total_items, max_take, verbose=False):
                 reasoning, move = get_move_with_reflection(current_agent, current_items)
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, current_items)
+            elif current_agent["prompting_method"] == "dreamad":
+                reasoning, move = get_move_dreamad(current_agent, current_agent, current_items)
             elif current_agent["prompting_method"] == "self_play_debate":
                 reasoning, move = self_play_debate(current_agent, other_agent, current_items, n_step_lookahead)
             elif current_agent["prompting_method"] == "self_play_debate_exp":

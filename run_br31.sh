@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Define the list of configurations for each parameter
-AGENT1_MODELS=("gpt-4o-mini" "gpt-3.5-turbo")
+AGENT1_MODELS=("gpt-4o") #("gpt-4o-mini" "gpt-4o" "gpt-4o-large")
 AGENT2_MODELS=("gpt-4o")
-AGENT1_PROMPTS=("original_vs_harmonized_debate") #("bias_mitigate_debate") #original_vs_harmonized_debate "basic" "debate" "self_reflection" "self_consistency"
+AGENT1_PROMPTS=("self_consistency") #("bias_mitigate_debate") #original_vs_harmonized_debate "basic" "debate" "self_reflection" "self_consistency"
 AGENT2_PROMPTS=("basic")
-LOOK_AHEAD_VALUES=(3)
+LOOK_AHEAD_VALUES=(0)
 NUM_GAMES_VALUES=(50)
 
 # Output directory for logs

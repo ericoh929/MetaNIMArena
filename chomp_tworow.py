@@ -435,6 +435,20 @@ def get_move_with_reflection(agent, grid):
         feedback = parsed_content.get("feedback", "No feedback provided.")
 
         refine_prompt = f"""
+        # Game Role:
+        You are {agent['name']}, a participant in a game of Chomp.
+
+        # Objective:
+        Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
+
+        # Game Rule:
+        1. The game is played on a square grid.
+        2. On your turn, you select a position (row, col).
+        3. All positions to the right and below the selected position are removed.
+        4. The player forced to select (0, 0) loses.
+
+        # Current State:
+        The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
         # Current State:
         {remaining_grid}
 
