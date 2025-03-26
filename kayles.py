@@ -16,7 +16,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '4, 5'
 
 import os
 import google.generativeai as genai
-genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+gemini_api_keys = [
+    'AIzaSyB5lNkfPiDJMkwNrpAv3MHbnnFvkpuF7Ok',  # 첫 번째 API 키
+    'AIzaSyCYkix3fQio-WpUus7ziwNGhSk6qZp7LJs'   # 두 번째 API 키
+]
+selected_api_key = random.choice(gemini_api_keys)
+genai.configure(api_key=selected_api_key)
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),)
 
@@ -117,7 +122,7 @@ def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
 #         # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
 #         return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
 
-def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."):
+def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.", temperature=0.7):
     """
     Handles responses for different models based on the agent's configuration.
 
@@ -158,7 +163,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
 
             elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
                 generation_config = {
-                    "temperature": 0.7,
+                    "temperature": temperature,
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 8192,
@@ -183,7 +188,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                         {"role": "user", "content": prompt},
                     ],
                     model=agent["model"],
-                    temperature=0.7,
+                    temperature=temperature,
                 )
                 content = response.choices[0].message.content
                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
@@ -203,6 +208,59 @@ agents = [
     {"name": "Agent 1", "model": args.agent1_model, "prompting_method": args.agent1_prompt},
     {"name": "Agent 2", "model": args.agent2_model, "prompting_method": args.agent2_prompt}
 ]
+def get_move(agent, pins):
+    remaining_pins = ''.join(['1' if pin else '0' for pin in pins])
+    prompt = f"""
+    # Game Role:
+    You are {agent['name']}, a participant in a game of Kayles.
+
+    # Objective:
+    Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
+
+    # Game Rule:
+    1. There is a single row of pins.
+    2. On your turn, you can remove:
+       - A single pin.
+       - Two adjacent pins.
+    3. You cannot remove non-adjacent pins or pins that have already been removed.
+
+    # Current State:
+    The row of pins is represented as a binary string: 
+    - '1' means the pin is still available.
+    - '0' means the pin has already been removed.
+    Current state: "{remaining_pins}"
+
+    # Task:
+    Based on the current state of the game, decide which pin(s) you will take on this turn.
+
+    # Output:
+    Provide the action in the following JSON format:
+
+    ```
+    {{
+        "action": list       // A list of integers representing the indices (0-based) of the pins you will remove.
+                              // Valid moves include single pins or two adjacent pins. Only provide valid indices.
+    }}
+    ```
+    """
+    retries = 0
+    while retries < max_retries:
+        parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Kayles player.")
+        reasoning = "None"
+        action = parsed_content.get("action")
+
+        if is_valid_move(pins, action):
+            return reasoning, action  # Exit loop if the action is valid
+
+        retries += 1
+
+    available_pins = [i for i, pin in enumerate(pins) if pin]
+    if available_pins:
+        action = [random.choice(available_pins)]
+        reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
+        return reasoning, action
+
+
 
 # Function for basic move (single-response without consistency or modeling)
 def get_basic_move(agent, pins):
@@ -896,127 +954,173 @@ def get_move_with_debate(agent1, agent2, pins):
                     initial_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
 
             if i == 0:
-                initial_moves['agent1'] = initial_action
-                initial_reasonings['agent1'] = initial_reasoning
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
             if i == 1:
-                initial_moves['agent2'] = initial_action
-                initial_reasonings['agent2'] = initial_reasoning
-
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
             i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
             
         if len(set(initial_moves.values())) == 1:
             return initial_reasoning, initial_action
 
     return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
 
-def get_move_with_bias_mitigate_debate(agent1, agent2, pins):
+def get_move_dreamad(agent1, agent2, pins):
     initial_moves = {}
     initial_reasonings = {}
     i = 0
-    for agent in [agent1, agent2]:
+    for agent in [agent1]:
         remaining_pins = ''.join(['1' if pin else '0' for pin in pins])
-        if i == 0:
-            prompt = f"""
-            # Game Role:
-            You are {agent['name']}, a participant in a game of Kayles.
+        prompt = f"""
+        # Game Role:
+        You are {agent['name']}, a participant in a game of Kayles.
 
-            # Objective:
-            Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
+        # Objective:
+        Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
 
-            # Game Rule:
-            1. There is a single row of pins.
-            2. On your turn, you can remove:
-            - A single pin.
-            - Two adjacent pins.
-            3. You cannot remove non-adjacent pins or pins that have already been removed.
+        # Game Rule:
+        1. There is a single row of pins.
+        2. On your turn, you can remove:
+        - A single pin.
+        - Two adjacent pins.
+        3. You cannot remove non-adjacent pins or pins that have already been removed.
+        4. Action is 0-based index of the pins.
 
-            # Current State:
-            The row of pins is represented as a binary string: 
-            - '1' means the pin is still available.
-            - '0' means the pin has already been removed.
-            Current state: "{remaining_pins}"
+        # Current State:
+        The row of pins is represented as a binary string: 
+        - '1' means the pin is still available.
+        - '0' means the pin has already been removed.
+        Current state: "{remaining_pins}"
 
-            # Task:
-            Based on the current state of the game, decide which pin(s) you will take on this turn.
+        # Task:
+        Based on the current state of the game, decide which pin(s) you will take on this turn.
+        """
+        #################prompt1#################
+        game_prompt = f"""
+        Below is a game description. Extract key information.
 
-            # Output:
-            Provide your reasoning for the move and the action in the following JSON format:
+        **Game Description:**
+        {prompt}
 
-            ```
-            {{
-                "reasoning": string  // Explain why you chose the pins to remove.
-                "action": list       // A list of integers representing the indices (0-based) of the pins you will remove.
-                                    // Valid moves include single pins or two adjacent pins. Only provide valid indices.
-            }}
-            ```
-            """
-
-            retries = 0
-            while retries < max_retries:
-                parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Kayles player and debating the best action.")
-                initial_reasoning = parsed_content.get("reasoning")
-                initial_action = parsed_content.get("action")
-
-                if is_valid_move(pins, initial_action):
-                    break
-
-                retries += 1
-
-            if retries == max_retries:
-                available_pins = [i for i, pin in enumerate(pins) if pin]
-                if available_pins:
-                    initial_action = [random.choice(available_pins)]
-                    initial_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
-
-        if i == 1:
-            text = f"""Given the following instruction, rewrite it to minimize bias stemming from strong prior knowledge while preserving its original intent and clarity.\n
-            #Instruction:{prompt}\n
-                
-
-            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"instruction": string  // This is a rewritten instruction to minimize the bias.\n}}
-            """
-
-            parsed_content = get_agent_response(agent, text, system_prompt="You are a rational smart assistant.")
-            new_instruction = parsed_content.get("instruction")
-
-            text = f"""{new_instruction}\n\n
-
-            # Output:
-            Provide your reasoning for the move and the action in the following JSON format:
-
-            ```
-            {{
-                "reasoning": string  // Explain why you chose the pins to remove.
-                "action": list       // A list of integers representing the indices (0-based) of the pins you will remove.
-                                    // Valid moves include single pins or two adjacent pins. Only provide valid indices.
-            }}
-            ```
-            """
-
-            retries = 0
-            while retries < max_retries:
-                parsed_content = get_agent_response(agent, text, system_prompt="You are a rational game player.")
-                initial_reasoning = parsed_content.get("reasoning")
-                initial_action = parsed_content.get("action")
-
-                if is_valid_move(pins, initial_action):
-                    break
-
-                retries += 1
-
-            if retries == max_retries:
-                available_pins = [i for i, pin in enumerate(pins) if pin]
-                if available_pins:
-                    initial_action = [random.choice(available_pins)]
-                    initial_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
+        ### Format Response as:
+        ```
+        {{
+        "game_definition": "string", // What is the definition of this game?.
+        "winning_condition": "string", // How to win the game.
+        "move_constraints": "string" // What actions are allowed per turn.
+        }}
+        ```
+        """
     
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+        game_definition = parsed_content.get("game_definition")
+        winning_condition = parsed_content.get("winning_condition")
+        move_constraints = parsed_content.get("move_constraints")
+
+
+        strategy_prompt = f"""
+        Based on the game information below, derive the **optimal strategy**.
+
+        **Game:** {game_definition}  
+        **Winning Condition:** {winning_condition}  
+        **Move Constraints:** {move_constraints}
+
+        ### Format Response as:
+        ```
+        {{
+        "state_evaluation": "string", // How to assess the game state.
+        "winning_strategy": "string", // Winning strategy in this turn to win this game.
+        "endgame_tactics": "string" // Best strategy in a near-win situation.
+        }}
+        ```
+        """
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+
+        state_evaluation = parsed_content.get("state_evaluation")
+        winning_strategy = parsed_content.get("winning_strategy")
+        endgame_tactics = parsed_content.get("endgame_tactics")
+
+
+    for agent in [agent1, agent2]:
+
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
+
+        **Game:** {game_definition}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
+
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
+
+        ### Format Response as:
+        ```
+        {{
+            "optimized_prompt": "string", // The refined prompt that clearly directs decision-making.
+        }}
+        ```
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
+
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        one_new_prompt = f"""{optimized_prompt}\n
+
+        **Current State:**  
+        The row of pins is represented as a binary string: 
+        - '1' means the pin is still available.
+        - '0' means the pin has already been removed.
+        Current state: "{remaining_pins}"
+    
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
+
+        # Output:
+        Provide your reasoning for the move and the action in the following JSON format:
+        ```
+        {{
+            "reasoning": string  // Explain why you chose the pins to remove.
+            "action": list  // A list of integers representing the indices (0-based) of the pins you will remove.
+            // Valid moves include single pins or two adjacent pins. Only provide valid indices.
+        }}
+        ```
+        """
+        one_parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a game theorist and strategist.")
+        one_reasoning = one_parsed_content.get("reasoning")
+        one_action = one_parsed_content.get("action")
+
         if i == 0:
-            initial_moves['agent1'] = initial_action
-            initial_reasonings['agent1'] = initial_reasoning
+            initial_moves['agent1'] = one_action
+            initial_reasonings['agent1'] = one_reasoning
+            one_prompt = optimized_prompt
         if i == 1:
-            initial_moves['agent2'] = initial_action
-            initial_reasonings['agent2'] = initial_reasoning
+            initial_moves['agent2'] = one_action
+            initial_reasonings['agent2'] = one_reasoning
+            two_prompt = optimized_prompt
+
         i += 1
+
 
     for _ in range(debate_rounds):
         i = 0
@@ -1025,11 +1129,7 @@ def get_move_with_bias_mitigate_debate(agent1, agent2, pins):
             if i == 0:
                 remaining_pins = ''.join(['1' if pin else '0' for pin in pins])
                 prompt = f"""
-                # Game Role:
-                You are {agent['name']}, a participant in a game of Kayles.
-
-                # Objective:
-                Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
+                {one_prompt}\n
 
                 # Game Rule:
                 1. There is a single row of pins.
@@ -1037,84 +1137,98 @@ def get_move_with_bias_mitigate_debate(agent1, agent2, pins):
                 - A single pin.
                 - Two adjacent pins.
                 3. You cannot remove non-adjacent pins or pins that have already been removed.
+                4. Action is 0-based index of the pins.
 
-                # Current State:
+                **Current State:**  
                 The row of pins is represented as a binary string: 
                 - '1' means the pin is still available.
                 - '0' means the pin has already been removed.
                 Current state: "{remaining_pins}"
 
-                # Task:
-                Based on the current state of the game, decide which pin(s) you will take on this turn.
-
                 You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
                 Other agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
-                Considering the other's opinion, refine or confirm your move.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+                ### Instructions:
+                1. **If a winning move exists, take it immediately.**  
+                2. **Otherwise, follow optimal move principles.**  
+                3. Justify your move using the extracted strategy.
+                
 
                 # Output:
                 Provide your reasoning for the move and the action in the following JSON format:
-
                 ```
                 {{
                     "reasoning": string  // Explain why you chose the pins to remove.
-                    "action": list       // A list of integers representing the indices (0-based) of the pins you will remove.
-                                        // Valid moves include single pins or two adjacent pins. Only provide valid indices.
+                    "action": list       // A list of integers representing the indices (0-based) of the pins you will remove. // Valid moves include single pins or two adjacent pins. Only provide valid indices.
                 }}
                 ```
                 """
-
             if i == 1:
                 remaining_pins = ''.join(['1' if pin else '0' for pin in pins])
                 prompt = f"""
-                {new_instruction}\n\n
+                {two_prompt}\n
+
+                # Game Rule:
+                1. There is a single row of pins.
+                2. On your turn, you can remove:
+                - A single pin.
+                - Two adjacent pins.
+                3. You cannot remove non-adjacent pins or pins that have already been removed.
+                4. Action is 0-based index of the pins.
+
+                **Current State:**  
+                The row of pins is represented as a binary string: 
+                - '1' means the pin is still available.
+                - '0' means the pin has already been removed.
+                Current state: "{remaining_pins}"
 
                 You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
                 Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
-                Considering the other's opinion, refine or confirm your move.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Instructions:
+                1. **If a winning move exists, take it immediately.**  
+                2. **Otherwise, follow optimal move principles.**  
+                3. Justify your move using the extracted strategy.
 
                 # Output:
                 Provide your reasoning for the move and the action in the following JSON format:
-
                 ```
                 {{
                     "reasoning": string  // Explain why you chose the pins to remove.
-                    "action": list       // A list of integers representing the indices (0-based) of the pins you will remove.
-                                        // Valid moves include single pins or two adjacent pins. Only provide valid indices.
+                    "action": list       // A list of integers representing the indices (0-based) of the pins you will remove. // Valid moves include single pins or two adjacent pins. Only provide valid indices.
                 }}
                 ```
                 """
 
-            retries = 0
-            while retries < max_retries:
-                parsed_content = get_agent_response(agent, prompt, system_prompt="You are a rational game player and debating the best action.")
-                initial_reasoning = parsed_content.get("reasoning")
-                initial_action = parsed_content.get("action")
+            parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Game player and debating the best move.")
 
-                if is_valid_move(pins, initial_action):
-                    break
-
-                retries += 1
-
-            if retries == max_retries:
-                available_pins = [i for i, pin in enumerate(pins) if pin]
-                if available_pins:
-                    initial_action = [random.choice(available_pins)]
-                    initial_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
-            
+            initial_reasoning = parsed_content.get("reasoning")
+            initial_action = tuple(parsed_content.get("action"))
+            initial_action = tuple(map(int, initial_action))
             if i == 0:
-                initial_moves['agent1'] = initial_action
-                initial_reasonings['agent1'] = initial_reasoning
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
             if i == 1:
-                initial_moves['agent2'] = initial_action
-                initial_reasonings['agent2'] = initial_reasoning
-
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
             i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
             
         if len(set(initial_moves.values())) == 1:
             return initial_reasoning, initial_action
 
     return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
 
+
+
+
+import random
 
 def play_kayles_game(total_pins, verbose=False):
     with open(f'/home/jihwan/NashIP/result/1K/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
@@ -1131,26 +1245,24 @@ def play_kayles_game(total_pins, verbose=False):
                 reasoning, move = get_move_with_reflection(current_agent, pins)
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, pins)
-            # elif current_agent["prompting_method"] == "self_play_debate":
-            #     reasoning, move = self_play_debate(current_agent, other_agent, pins, n_step_lookahead)
-            # elif current_agent["prompting_method"] == "self_play_debate_exp":
-            #     reasoning, move = self_play_debate_exp(current_agent, other_agent, pins, n_step_lookahead)
+            elif current_agent["prompting_method"] == "dreamad":
+                reasoning, move = get_move_dreamad(current_agent, current_agent, pins)
             elif current_agent["prompting_method"] == "bias_removed":
                 reasoning, move = bias_removed(current_agent, pins)
             elif current_agent["prompting_method"] == "bias_mitigated":
                 reasoning, move = bias_mitigated(current_agent, pins)
             elif current_agent["prompting_method"] == "basic":
                 reasoning, move = get_basic_move(current_agent, pins)
-            elif current_agent["prompting_method"] == "bias_mitigate_debate":
-                reasoning, move = get_move_with_bias_mitigate_debate(current_agent, current_agent, pins)
+            elif current_agent["prompting_method"] == "simple":
+                reasoning, move = get_move(current_agent, pins)
             else:
                 print("Error: set the prompting methods")
                 return None
 
+            # ✅ 유효하지 않은 이동이면 랜덤한 유효한 액션 수행
             if not is_valid_move(pins, move):
-                print(f"Invalid move by {current_agent['name']}.", file=f)
-                print('move', move, file=f)
-                return other_agent["name"]
+                print(f"Invalid move by {current_agent['name']}. Choosing random valid move.", file=f)
+                move = get_random_valid_move(pins)  # 랜덤으로 유효한 액션 선택
 
             apply_move(pins, move)
 
@@ -1167,10 +1279,9 @@ def play_kayles_game(total_pins, verbose=False):
 
 
 def is_valid_move(pins, move):
-    if len(move) == 1:  # Single pin removal
-        print()
+    if len(move) == 1:  # 단일 핀 제거
         return 0 <= move[0] < len(pins) and pins[move[0]]
-    elif len(move) == 2:  # Adjacent pin removal
+    elif len(move) == 2:  # 인접한 핀 제거
         return (
             0 <= move[0] < len(pins)
             and 0 <= move[1] < len(pins)
@@ -1186,7 +1297,23 @@ def apply_move(pins, move):
         pins[index] = False
 
 
-# Run the simulation
+def get_random_valid_move(pins):
+    """ 선택 가능한 핀 중에서 랜덤으로 유효한 액션을 선택 """
+    available_pins = [i for i, pin in enumerate(pins) if pin]
+    
+    if len(available_pins) == 0:
+        return None  # 더 이상 유효한 액션이 없음
+
+    # 단일 핀 선택 또는 인접한 핀 2개 선택 가능
+    if len(available_pins) > 1:
+        if random.random() < 0.5:  # 50% 확률로 두 개의 인접한 핀 제거 시도
+            random.shuffle(available_pins)  # 리스트를 랜덤하게 섞기
+            for i in range(len(available_pins) - 1):
+                if available_pins[i] + 1 == available_pins[i + 1]:  # 인접한 핀 찾기
+                    return (available_pins[i], available_pins[i + 1])
+    
+    return (random.choice(available_pins),)  # 랜덤 단일 핀 제거
+
 def simulate_kayles_games(num_games, total_pins):
     win_counts = {agent["name"]: 0 for agent in agents}
     with open(f'/home/jihwan/NashIP/result/1K/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
@@ -1202,196 +1329,4 @@ def simulate_kayles_games(num_games, total_pins):
             win_rate = (win_counts[agent["name"]] / num_games) * 100
             print(f"{agent['name']} Win Rate: {win_rate:.2f}% ({win_counts[agent['name']]} wins out of {num_games})", file=f)
 
-
 simulate_kayles_games(num_games, total_items)
-
-
-
-# def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
-#     initial_remaining_items = remaining_items
-#     moves = []  # Track each agent's moves for each lookahead step
-#     planning = ''
-#     for step in range(1, n_step_lookahead + 1):
-#         # Agent 1's move
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent1 = f"""
-#         #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-
-#         parsed_content = get_agent_response(agent1, prompt_agent1, system_prompt="You are a skilled Nim player.")
-#         agent1_reasoning = parsed_content.get("reasoning")
-#         agent1_action = parsed_content.get("action")
-
-#         agent1_move = int(agent1_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'My reasoning: {agent1_reasoning}\n'
-#         planning += f'My action: {agent1_action}\n'
-        
-#         remaining_items -= agent1_move
-#         planning += f'Remaining total items by your action: {remaining_items}\n\n'
-#         moves.append((agent1["name"], agent1_move, remaining_items))
-
-#         # Check if game ends with Agent 1's move
-#         if remaining_items <= 0 and step == 0:
-#             return agent1_reasoning, agent1_move  # Agent 1 wins if no items remain
-#         if remaining_items <= 0:
-#             break
-
-#         # Agent 2's simulated response
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent2 = f"""
-#         #Game Role:\n You are {agent2['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-#         parsed_content = get_agent_response(agent2, prompt_agent2, system_prompt="You are a skilled Nim player.")
-#         agent2_reasoning = parsed_content.get("reasoning")
-#         agent2_action = parsed_content.get("action")
-
-#         agent2_move = int(agent2_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'Opponent reasoning: {agent2_reasoning}\n'
-#         planning += f'Opponent action: {agent2_action}\n'
-#         remaining_items -= agent2_move
-
-#         planning += f'Remaining total items by opponent\'s action: {remaining_items}\n\n'
-#         moves.append((agent2["name"], agent2_move, remaining_items))
-        
-
-#         # Check if game ends with Agent 2's move
-#         if remaining_items <= 0:
-#             break
-#             # return agent1_reasoning, agent1_move  # Agent 1's initial move if Agent 2 would win
-
-#     # Final decision for Agent 1 based on the full n-step lookahead sequence
-#     move_sequence_str = "; ".join([f"{name} took {move} items and {remains} items remained" for name, move, remains in moves]) #Decide how many items to take between 1 and {max_take} at this current step to win by taking all remaining items on your turn, leaving no items for your opponent. Provide your reasoning and action in the following schema:
-#     final_prompt_agent1 = f"""
-#     #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#     #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#     #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#     #Current State:\n There are {initial_remaining_items} items remaining in the pile.\n\n
-#     #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#     As part of your strategy, you conducted a simulated planning process. This planning predicted possible moves by the opponent and future scenarios based on the current state of the game.
-#     The planning results are provided below as a reference:\n
-#     #Simulated Planning History:\n{planning}\nSimultion ends.\n\n
-
-#     Now, carefully review the simulated planning history and reflect and decide how many items you will take (between 1 and 3) on this turn.\n
-
-#     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning Only provide integer between 1 and 3.\n}}
-#     """
-#     parsed_content = get_agent_response(agent1, final_prompt_agent1, system_prompt="You are a skilled Nim player.")
-#     agent1_reasoning = parsed_content.get("reasoning")
-#     agent1_action = parsed_content.get("action")
-
-#     agent1_final_move = int(agent1_action)
-    
-#     return agent1_reasoning, agent1_final_move
-
-# def self_play_debate_exp(agent1, agent2, remaining_items, n_step_lookahead):
-#     initial_remaining_items = remaining_items
-#     moves = []  # Track each agent's moves for each lookahead step
-#     planning = ''
-#     for step in range(1, n_step_lookahead + 1):
-#         # Agent 1's move
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent1 = f"""
-#         #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-
-#         parsed_content = get_agent_response(agent1, prompt_agent1, system_prompt="You are a skilled Nim player.")
-
-#         agent1_reasoning = parsed_content.get("reasoning")
-#         agent1_action = parsed_content.get("action")
-#         agent1_move = int(agent1_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'My reasoning: {agent1_reasoning}\n'
-#         planning += f'My action: {agent1_action}\n'
-        
-#         remaining_items -= agent1_move
-#         planning += f'Remaining total items by your action: {remaining_items}\n\n'
-#         moves.append((agent1["name"], agent1_move, remaining_items))
-
-#         # Check if game ends with Agent 1's move
-#         if step == 0 and remaining_items <= 0:
-#             return agent1_reasoning, agent1_move  # Agent 1 wins if no items remain
-        
-#         if remaining_items <= 0:
-#             break
-
-#         # Agent 2's simulated response
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent2 = f"""
-#         #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-        
-#         agent2_reasoning, agent2_action = get_move_with_debate(agent1, agent1, remaining_items)
-
-#         agent2_move = int(agent2_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'Opponent reasoning: {agent2_reasoning}\n'
-#         planning += f'Opponent action: {agent2_action}\n'
-
-#         remaining_items -= agent2_move
-#         planning += f'Remaining total items by opponent\'s action: {remaining_items}\n\n'
-#         moves.append((agent2["name"], agent2_move, remaining_items))
-        
-
-#         # Check if game ends with Agent 2's move
-#         if remaining_items <= 0:
-#             break
-#             # return agent1_reasoning, agent1_move  # Agent 1's initial move if Agent 2 would win
-
-#     # Final decision for Agent 1 based on the full n-step lookahead sequence
-#     move_sequence_str = "; ".join([f"{name} took {move} items and {remains} items remained" for name, move, remains in moves]) #\nIn short, Predicted Move Sequence (after {n_step_lookahead} steps):\n{move_sequence_str}
-#     final_prompt_agent1 = f"""
-#     #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#     #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#     #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#     #Current State:\n There are {initial_remaining_items} items remaining in the pile.\n\n
-#     #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#     As part of your strategy, you conducted a simulated planning process. This planning predicted possible moves by the opponent and future scenarios based on the current state of the game.
-#     The planning results are provided below as a reference:
-
-#     Simulated Planning History:\n{planning}\nSimultion ends.\n\n
-
-#     Now, carefully review the simulated planning history and reflect and decide how many items you will take (between 1 and 3) on this turn.\n
-    
-#     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#     """
-
-#     parsed_content = get_agent_response(agent1, final_prompt_agent1, system_prompt="You are a skilled Nim player.")
-
-#     agent1_reasoning = parsed_content.get("reasoning")
-#     agent1_action = parsed_content.get("action")
-
-#     agent1_final_move = int(agent1_action)
-    
-#     return agent1_reasoning, agent1_final_move

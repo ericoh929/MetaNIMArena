@@ -1,0 +1,199 @@
+Reasoning: Removing two pins from the end of Pile 2 leaves a nim-sum of 0, guaranteeing a win.  This is the optimal move according to the Sprague-Grundy theorem. 
+Action: (1, (5, 4))
+Agent 1 (gemini-1.5-flash) removes pins (5, 4) from pile 2. Remaining state: [[True, True, True, True, True], [True, True, True, True, False, False]]
+Reasoning: The goal is to leave the opponent with a difficult position to manage. By removing two adjacent pins from Pile 1, I can reduce the number of contiguous pins, potentially creating smaller segments that are harder to manage. This move also leaves Pile 2 with an even number of pins, which can be strategically advantageous in future turns. 
+Action: (0, [1, 2])
+Agent 2 (gpt-4o) removes pins [1, 2] from pile 1. Remaining state: [[True, False, False, True, True], [True, True, True, True, False, False]]
+Reasoning: The opponent's analysis correctly points out the flaw in my initial reasoning.  The nim-values aren't directly the decimal representation of the binary strings but are derived from the grouping of consecutive 1s. Pile 1 ('10011') has nim-value groups of (1) and (11), resulting in a nim-sum of 1^2 = 3. Pile 2 ('111100') has a nim-value group of (1111), resulting in a nim-sum of 0. The total nim-sum is 3 ^ 0 = 3. To force a win, we must leave the opponent with a nim-sum of 0. Removing the pin at index 4 of Pile 1 ('10011' -> '10010') changes the nim-sum of Pile 1 to 1^1 = 0. The new total nim-sum becomes 0^0 = 0. This guarantees a win.  
+Action: (0, (4,))
+Agent 1 (gemini-1.5-flash) removes pins (4,) from pile 1. Remaining state: [[True, False, False, True, False], [True, True, True, True, False, False]]
+Reasoning: In this state, I want to maximize my chances of winning by leaving the opponent with fewer options. Pile 2 has more pins and potential moves, so focusing on reducing options there seems strategic. By removing two adjacent pins in Pile 2, I can break the block of four consecutive pins '1111' into smaller segments, making it harder for the opponent to make impactful moves. This also reduces the total number of pins significantly. 
+Action: (1, [1, 2])
+Agent 2 (gpt-4o) removes pins [1, 2] from pile 2. Remaining state: [[True, False, False, True, False], [True, False, False, True, False, False]]
+Reasoning: Pile 1 has a Grundy value of 2, and Pile 2 has a Grundy value of 3. The Nim-sum is 1, indicating that the current player is in a losing position. To win, the player must change the Nim-sum to 0. Removing the first pin from Pile 1 (index 0) changes its Grundy value to 1. The Nim-sum becomes 1^3 = 2, which is not 0. Removing the pin at index 0 from Pile 2 changes its Grundy value to 2. The Nim sum becomes 2^2 = 0, resulting in a win for the current player. Therefore, removing the first pin from Pile 2 is the optimal move. 
+Action: (1, (0,))
+Agent 1 (gemini-1.5-flash) removes pins (0,) from pile 2. Remaining state: [[True, False, False, True, False], [False, False, False, True, False, False]]
+Reasoning: In Pile 1, there are only two isolated pins at indices 0 and 3, meaning there is no opportunity to remove two adjacent pins. In Pile 2, the only available pin is at index 3. To maximize my move and limit future options for my opponent, I will remove the single pin from Pile 2 at index 3, leaving Pile 2 completely empty and reducing my opponent's options. 
+Action: (1, [3])
+Agent 2 (gpt-4o) removes pins [3] from pile 2. Remaining state: [[True, False, False, True, False], [False, False, False, False, False, False]]
+Reasoning: Pile 1 has a nim-sum of 1. Removing the pin at index 0 will leave Pile 1 as "00010", which has a nim-sum of 0, forcing a win. Removing two adjacent pins is not possible because there are no adjacent 1s. Removing the pin at index 3 would result in "10000", which has a nim-sum of 1, and would not force a win. Therefore, removing the pin at index 0 is the optimal move. 
+Action: (0, (0,))
+Agent 1 (gemini-1.5-flash) removes pins (0,) from pile 1. Remaining state: [[False, False, False, True, False], [False, False, False, False, False, False]]
+Reasoning: In the current state, Pile 1 has only one pin left at index 3, and Pile 2 has no pins available to remove. Since removing the last pin in Pile 1 will leave my opponent with no available moves, this is the optimal move to win the game. 
+Action: (0, [3])
+Agent 2 (gpt-4o) removes pins [3] from pile 1. Remaining state: [[False, False, False, False, False], [False, False, False, False, False, False]]
+Agent 2 (gpt-4o) wins!
+Reasoning: Pile 1 has a nim-value of 5, and Pile 2 has a nim-value of 6. The nim-sum is 5 ^ 6 = 3. To force a win, we need to make a move that results in a nim-sum of 0 for the opponent. Removing one pin from Pile 2 (index 0) leaves Pile 1 with nim-value 5 and Pile 2 with nim-value 5, resulting in a nim-sum of 0. This guarantees a win for Agent 1. 
+Action: (1, (0,))
+Agent 1 (gemini-1.5-flash) removes pins (0,) from pile 2. Remaining state: [[True, True, True, True, True], [False, True, True, True, True, True]]
+Reasoning: To maximize my chances of winning, I want to reduce the options my opponent has by creating a more fragmented board. I will target Pile 2 because it has a sequence of pins starting from index 1, which allows me to remove two adjacent pins and disrupt the continuity. By removing pins at indices 1 and 2 in Pile 2, I create gaps that increase the complexity for the opponent's next move. 
+Action: (1, [1, 2])
+Agent 2 (gpt-4o) removes pins [1, 2] from pile 2. Remaining state: [[True, True, True, True, True], [False, False, False, True, True, True]]
+Reasoning: Pile 1 has a Grundy value of 2 (length 5), and Pile 2 has a Grundy value of 3 (length 3). The Nim sum is 2 ^ 3 = 1, which is non-zero.  To win, we need to make the Nim sum zero. Removing the last pin from Pile 1 (index 4) changes its Grundy value to 1, resulting in a Nim sum of 2 ^ 1 = 3. Removing two adjacent pins from Pile 1 (indices 3 and 4) changes its Grundy value to 0, resulting in a Nim sum of 3. Removing the last pin from Pile 2 (index 5) changes its Grundy value to 2, resulting in a Nim sum of 0. This guarantees a win. Removing two adjacent pins from Pile 2 (indices 4 and 5) changes its Grundy value to 1, resulting in a Nim sum of 2. Therefore, removing the last pin from Pile 2 (index 5) is the optimal move to achieve a Nim sum of 0, guaranteeing a win. 
+Action: (1, (5,))
+Agent 1 (gemini-1.5-flash) removes pins (5,) from pile 2. Remaining state: [[True, True, True, True, True], [False, False, False, True, True, False]]
+Reasoning: In Pile 1, there are five consecutive pins available, while Pile 2 has already been partially reduced to a single pair of adjacent pins. By removing two adjacent pins from Pile 1, I can disrupt its continuity and create smaller segments, which makes it more challenging for the opponent to find advantageous moves. This move also keeps Pile 2 at a minimal state, forcing the opponent to focus on the more complex Pile 1. 
+Action: (0, [0, 1])
+Agent 2 (gpt-4o) removes pins [0, 1] from pile 1. Remaining state: [[False, False, True, True, True], [False, False, False, True, True, False]]
+Reasoning: Pile 1 has a Grundy value of 2, and Pile 2 has a Grundy value of 1. The XOR sum is 3, which is a winning position. Removing the pin at index 2 from Pile 1 changes its Grundy value to 1, resulting in an XOR sum of 0 (1 XOR 1 = 0). This guarantees a win. 
+Action: (0, (2,))
+Agent 1 (gemini-1.5-flash) removes pins (2,) from pile 1. Remaining state: [[False, False, False, True, True], [False, False, False, True, True, False]]
+Reasoning: In this position, Pile 1 has two adjacent pins at indices 3 and 4, and Pile 2 has two adjacent pins at indices 3 and 4. Removing both pins at indices 3 and 4 from either pile will leave the other pile with a single pin, which can be taken on the next turn. Therefore, removing the two adjacent pins from either pile will force my opponent into a losing position, as they will be left with only one move, allowing me to win by taking the last pin on my following turn. I choose to remove the two adjacent pins from Pile 2, as it will simplify the game state by leaving Pile 2 empty, making it easier to manage. 
+Action: (1, [3, 4])
+Agent 2 (gpt-4o) removes pins [3, 4] from pile 2. Remaining state: [[False, False, False, True, True], [False, False, False, False, False, False]]
+Reasoning: Fallback: Randomly selected a single available pin after multiple failed attempts. 
+Action: (0, (3, 4))
+Agent 1 (gemini-1.5-flash) removes pins (3, 4) from pile 1. Remaining state: [[False, False, False, False, False], [False, False, False, False, False, False]]
+Agent 1 (gemini-1.5-flash) wins!
+Reasoning: Removing two pins from the end of pile 2 creates a balanced state, forcing the opponent into a losing position. This is based on the analysis of the game's Sprague-Grundy values. By removing two pins from the end of the longer pile, the nim-sum of the resulting game states becomes zero, guaranteeing a win under optimal play.  The opponent's suggestion to remove the last pin from pile 1 is a suboptimal move; it does not guarantee a win and leaves the game in an unbalanced state. 
+Action: (1, (4, 5))
+Agent 1 (gemini-1.5-flash) removes pins (4, 5) from pile 2. Remaining state: [[True, True, True, True, True], [True, True, True, True, False, False]]
+Reasoning: To maximize my strategic advantage, I should aim to reduce the larger pile in a way that leaves my opponent with fewer optimal moves. Pile 1 has five consecutive pins available, while Pile 2 has four consecutive pins. By removing two adjacent pins from Pile 1, I can create a situation where the pile is split into smaller segments, making it more challenging for my opponent to form a winning strategy. This move also balances the piles slightly, leaving both piles with similar configurations, which can be advantageous in minimizing potential winning moves for the opponent. 
+Action: (0, [0, 1])
+Agent 2 (gpt-4o) removes pins [0, 1] from pile 1. Remaining state: [[False, False, True, True, True], [True, True, True, True, False, False]]
+Reasoning: Pile 1 has a Grundy value of 2, and Pile 2 has a Grundy value of 4. The Nim-sum is 2 ^ 4 = 6.  The goal is to leave the opponent with a Nim-sum of 0. Removing pins at indices 2 and 3 from Pile 1 results in a Grundy value of 1 for Pile 1.  Removing the first two pins from Pile 2 (111100 -> 011100) gives Pile 2 a Grundy value of 2. The nim sum is then 1^2 = 3.  However, removing pins at indices 0 and 1 from Pile 2 changes its Grundy value to 2, resulting in a nim sum of 2^2 = 0.This move leaves the opponent with a Nim-sum of 0, guaranteeing a win for the current player. Therefore, this is the optimal move. 
+Action: (1, (0, 1))
+Agent 1 (gemini-1.5-flash) removes pins (0, 1) from pile 2. Remaining state: [[False, False, True, True, True], [False, False, True, True, False, False]]
+Reasoning: Analyzing the current state of the game, I want to disrupt any potential sequences and try to leave a state that is more difficult for the opponent to navigate. In Pile 1, there is a sequence of three adjacent pins ('111'). Removing two adjacent pins from this sequence will leave a single pin, which is generally less strategic for the opponent. Therefore, I will remove the two adjacent pins '11' from indices 2 and 3 in Pile 1. 
+Action: (0, [2, 3])
+Agent 2 (gpt-4o) removes pins [2, 3] from pile 1. Remaining state: [[False, False, False, False, True], [False, False, True, True, False, False]]
+Reasoning: Pile 1 has a Grundy value of 1 (only one pin remains). Pile 2 has a Grundy value of 2. The Nim-sum is 1 ^ 2 = 3 != 0. Removing the only pin from Pile 1 results in a Nim-sum of 0. This guarantees a win for Agent 1.  Therefore, the optimal move is to remove the single pin in Pile 1. 
+Action: (0, (4,))
+Agent 1 (gemini-1.5-flash) removes pins (4,) from pile 1. Remaining state: [[False, False, False, False, False], [False, False, True, True, False, False]]
+Reasoning: Pile 1 has no available moves as all pins are removed. In Pile 2, the only available move is to remove the two adjacent pins at indices 2 and 3. By doing this, I leave my opponent with no further moves, which should secure my win. 
+Action: (1, [2, 3])
+Agent 2 (gpt-4o) removes pins [2, 3] from pile 2. Remaining state: [[False, False, False, False, False], [False, False, False, False, False, False]]
+Agent 2 (gpt-4o) wins!
+Reasoning: Pile 1 has size 5 and Pile 2 has size 6. The nim-sum is 5 ^ 6 = 3, which is non-zero.  This means a winning move exists.  To achieve a nim-sum of 0, we need to change the size of one of the piles such that the nim-sum becomes 0. Removing one pin from Pile 2 (index 5) results in pile sizes of 5 and 5, which has a nim-sum of 5 ^ 5 = 0. This guarantees a win for me. Removing two adjacent pins from Pile 2 would also result in a nim sum of 0, but removing a single pin is simpler and equally effective in this case. 
+Action: (1, (5,))
+Agent 1 (gemini-1.5-flash) removes pins (5,) from pile 2. Remaining state: [[True, True, True, True, True], [True, True, True, True, True, False]]
+Reasoning: The current state of the game is Pile 1: '11111' and Pile 2: '111110'. I aim to leave my opponent with fewer options to play optimally in subsequent moves. In Pile 2, there are 6 pins, which is an even number, allowing me to remove two adjacent pins from the middle, leaving two separate pairs of pins. This can create an awkward configuration for my opponent to handle, potentially leading to a position where they have to leave me with a winning move. Removing two adjacent pins from Pile 2 at indices 2 and 3 achieves this goal, turning the pile into '11100'. This leaves my opponent with two smaller groups of two pins, which can be advantageous for me in future moves. 
+Action: (1, [2, 3])
+Agent 2 (gpt-4o) removes pins [2, 3] from pile 2. Remaining state: [[True, True, True, True, True], [True, True, False, False, True, False]]
+Reasoning: Pile 1 has a Grundy value of 1. Pile 2 has a Grundy value of 2. The nim-sum is 1 ^ 2 = 3. To force a win, we need to make the nim-sum 0. Removing two adjacent pins from Pile 1 (indices 0 and 1) changes its Grundy value to 2, resulting in a nim-sum of 2 ^ 2 = 0. This guarantees a win, as it leaves the opponent with no winning move.  Removing only one pin from pile 1, as suggested initially, does not guarantee a win, as it leaves the opponent with a non-zero nim-sum and a potential winning strategy. 
+Action: (0, (0,))
+Agent 1 (gemini-1.5-flash) removes pins (0,) from pile 1. Remaining state: [[False, True, True, True, True], [True, True, False, False, True, False]]
+Reasoning: To maximize my chances of winning, I will aim to create a more complex situation for my opponent by removing two adjacent pins. In Pile 2, there's a sequence '110010' where removing the adjacent pins at indices 0 and 1 ('11') will split the pile into two separate components ('000010'), making it more challenging for my opponent to control the endgame. This move reduces the immediate options available to my opponent and potentially forces them into less advantageous moves. 
+Action: (1, [0, 1])
+Agent 2 (gpt-4o) removes pins [0, 1] from pile 2. Remaining state: [[False, True, True, True, True], [False, False, False, False, True, False]]
+Reasoning: Pile 1 has a nim-value of 7 (binary 111) and Pile 2 has a nim-value of 2 (binary 10). The nim-sum is 7 ^ 2 = 5. Removing pins at indices 2 and 3 from Pile 1 (resulting in "01011") changes Pile 1's nim-value to 5, resulting in a nim-sum of 5 ^ 2 = 0. This guarantees a win for Agent 1 because the opponent will not have a winning move after this. 
+Action: (0, (2, 3))
+Agent 1 (gemini-1.5-flash) removes pins (2, 3) from pile 1. Remaining state: [[False, True, False, False, True], [False, False, False, False, True, False]]
+Reasoning: Given the current state, a strategic move would be to remove the single pin at index 4 from Pile 2. This move will reduce the opponent's options in Pile 2 to a single isolated pin, which limits their ability to make a move involving two adjacent pins in that pile. This will force the opponent to focus on Pile 1, where the options are also limited, increasing the likelihood that I will have more control over the game in subsequent turns. 
+Action: (1, [4])
+Agent 2 (gpt-4o) removes pins [4] from pile 2. Remaining state: [[False, True, False, False, True], [False, False, False, False, False, False]]
+Reasoning: Pile 1: 01001 has a nim value of 2. Pile 2: 000000 has a nim value of 0. The nim-sum is 2.  To win, we need to leave the opponent with a nim-sum of 0. Removing the pin at index 1 (00001) or index 4 (01000) in Pile 1 results in a nim value of 1 for Pile 1, making the nim-sum 1.  However, removing pins at indices 1 and 2 (00001) will leave the opponent with only one possible move, making it a strategically better option than removing only a single pin. There is no move that directly leads to a nim-sum of 0; therefore, the strategy should focus on minimizing the opponent's options and leaving them with a non-zero nim-sum. Removing the pin at index 1 leaves the opponent with fewer options than removing the pin at index 4. 
+Action: (0, (1,))
+Agent 1 (gemini-1.5-flash) removes pins (1,) from pile 1. Remaining state: [[False, False, False, False, True], [False, False, False, False, False, False]]
+Reasoning: In this situation, Pile 1 has a single remaining pin at index 4, and Pile 2 has no available pins to remove. To win the game, I need to take the last available pin from Pile 1. This will leave my opponent with no valid moves, thus securing a win for me. 
+Action: (0, [4])
+Agent 2 (gpt-4o) removes pins [4] from pile 1. Remaining state: [[False, False, False, False, False], [False, False, False, False, False, False]]
+Agent 2 (gpt-4o) wins!
+Reasoning: Pile 1 has a Sprague-Grundy value of 4 (because it has 5 pins), and Pile 2 has a Sprague-Grundy value of 8 (because it has 6 pins). The nim-sum is 4 ^ 8 = 12, which is not 0. Removing one pin from Pile 2 will result in a nim-sum of 0. Removing a single pin from pile 2 leads to a nim sum of 0, guaranteeing a win.  The opponent's argument is also correct, as removing the first pin from pile 2 will lead to a winning position for me. 
+Action: (1, (0,))
+Agent 1 (gemini-1.5-flash) removes pins (0,) from pile 2. Remaining state: [[True, True, True, True, True], [False, True, True, True, True, True]]
+Reasoning: The game of Kayles can be approached by trying to leave the opponent in a position with no winning move. One strategy is to leave piles in a symmetric or balanced state, where the nim-sum (XOR of the pile sizes) becomes zero. In this case, Pile 1 has 5 pins and Pile 2 has 5 pins. Removing a single pin from Pile 1 will create an imbalance, potentially leading to a future advantageous position. By removing a pin from the beginning of Pile 1, I slightly reduce the symmetry and introduce complexity for the opponent. 
+Action: (0, [0])
+Agent 2 (gpt-4o) removes pins [0] from pile 1. Remaining state: [[False, True, True, True, True], [False, True, True, True, True, True]]
+Reasoning: Removing two pins from Pile 1 at indices 1 and 2 (0-based indices) results in Pile 1 being "011" (binary 3) and Pile 2 being "011111" (binary 63). The nim-sum is 3 XOR 63 = 62, which is not zero. However, removing two pins from Pile 1 at indices 0 and 1 results in Pile 1: 111 and Pile 2: 111111. Nim sum is 7 XOR 63 = 58. Removing two pins from Pile 2 at indices 0 and 1 results in Pile 1: 1111 and Pile 2: 11111. Nim sum is 15 XOR 31 = 26. Removing two pins from Pile 1 at indices 1 and 2 (1-based indices 2 and 3) leaves Pile 1 as "011" (binary 3) and Pile 2 as "011111" (binary 63). The nim-sum is 3 XOR 63 = 62. Removing two pins from Pile 2 at indices 1 and 2 (1-based indices 2 and 3) leaves Pile 1 as "01111" (binary 15) and Pile 2 as "01111" (binary 15). The nim-sum is 15 XOR 15 = 0. This guarantees a win.  Therefore, this move is chosen. 
+Action: (1, (3, 4))
+Agent 1 (gemini-1.5-flash) removes pins (3, 4) from pile 2. Remaining state: [[False, True, True, True, True], [False, True, True, False, False, True]]
+Reasoning: To minimize future moves for the opponent and create a more challenging state, I will aim to remove two adjacent pins from Pile 2. Pile 2 has a sequence '110' starting from index 1, which allows me to remove adjacent pins at indices 1 and 2. This action will leave the opponent with a less straightforward configuration in Pile 2, making it harder for them to quickly reach a winning move. 
+Action: (1, [1, 2])
+Agent 2 (gpt-4o) removes pins [1, 2] from pile 2. Remaining state: [[False, True, True, True, True], [False, False, False, False, False, True]]
+Reasoning: Pile 1 has a Sprague-Grundy value of 3, and Pile 2 has a Sprague-Grundy value of 1. The Nim-sum is 3 ^ 1 = 2.  To win, we need to change the Grundy value of either pile to make the Nim-sum 0. Removing pins at indices 1 and 2 from Pile 1 changes its Grundy value to 1, making the Nim-sum 0 and guaranteeing a win.  This corrects the previous analysis which incorrectly stated that removing pins at indices 2 and 3 would result in a Grundy value of 0 for Pile 1. Removing pins at indices 1 and 2 is a valid move and directly leads to a winning position. 
+Action: (0, (2, 3))
+Agent 1 (gemini-1.5-flash) removes pins (2, 3) from pile 1. Remaining state: [[False, True, False, False, True], [False, False, False, False, False, True]]
+Reasoning: Currently, Pile 1 has two separate single pins available at positions 1 and 4. Removing any single pin will still leave the opponent with options on their turn. Pile 2 has only one pin available at position 5. By removing the single pin in Pile 2, I will completely eliminate Pile 2 from the game, thereby reducing the overall number of options for the opponent and forcing them to play in Pile 1. This move simplifies the game and potentially leads to a more advantageous position for me in subsequent turns. 
+Action: (1, [5])
+Agent 2 (gpt-4o) removes pins [5] from pile 2. Remaining state: [[False, True, False, False, True], [False, False, False, False, False, False]]
+Reasoning: Pile 1 has a single available move that leads to a direct win. Removing the pin at index 1 will leave Pile 1 as "00001", leaving no legal moves for the opponent.  While removing the pin at index 4 would lead to a Nim-sum of 0 for the opponent, a direct win is always preferable. 
+Action: (0, (1,))
+Agent 1 (gemini-1.5-flash) removes pins (1,) from pile 1. Remaining state: [[False, False, False, False, True], [False, False, False, False, False, False]]
+Reasoning: In the current state, Pile 1 has only one pin remaining at the end, and Pile 2 has no pins available. By removing the last pin from Pile 1, I will take the final move and win the game, as my opponent will have no available pins to remove on their turn. 
+Action: (0, [4])
+Agent 2 (gpt-4o) removes pins [4] from pile 1. Remaining state: [[False, False, False, False, False], [False, False, False, False, False, False]]
+Agent 2 (gpt-4o) wins!
+Reasoning: The optimal strategy in Kayles involves considering the nim-sum of the game state.  The nim-sum represents the bitwise XOR of the number of pins in each pile.  Initially, Pile 1 has 5 pins and Pile 2 has 6 pins.  The nim-sum is 5 ^ 6 = 3, indicating a winning position for the current player. To force a losing position for the opponent, we need to change the nim-sum to 0. Removing a single pin from Pile 2 (index 5, 0-based) results in Pile 1 having 5 pins and Pile 2 having 5 pins. The nim-sum becomes 5 ^ 5 = 0, which is a losing position for the opponent.  Any move the opponent makes will result in a non-zero nim-sum, giving the current player a winning move. Therefore, this move guarantees a win for Agent 1.  Removing the last pin from Pile 1, as suggested initially, is not as robust as it leaves the opponent with options to create a winning position. This strategy is superior because it considers all possible opponent moves, not just single-pin removals. 
+Action: (0, (4,))
+Agent 1 (gemini-1.5-flash) removes pins (4,) from pile 1. Remaining state: [[True, True, True, True, False], [True, True, True, True, True, True]]
+Reasoning: The current state of Pile 1 is '11110', which means there is a cluster of 4 pins followed by a removed pin. Similarly, Pile 2 is '111111', a complete cluster of 6 pins. To maximize control, I will target Pile 2 because it has more pins and provides more future options. By removing two adjacent pins from the middle of Pile 2, I can break the cluster into smaller segments, which may limit my opponent's strategic moves in the future. Removing from the middle also leaves me with two segments of two pins each, which are easier to manage. 
+Action: (1, [2, 3])
+Agent 2 (gpt-4o) removes pins [2, 3] from pile 2. Remaining state: [[True, True, True, True, False], [True, True, False, False, True, True]]
+
+Starting Game 1
+
+Starting Game 2
+
+Starting Game 3
+
+Starting Game 4
+
+Starting Game 5
+
+Starting Game 6
+
+Starting Game 1
+move:  (1, (5, 4))
+move:  (0, [1, 2])
+move:  (0, (4,))
+move:  (1, [1, 2])
+move:  (1, (0,))
+move:  (1, [3])
+move:  (0, (0,))
+move:  (0, [3])
+
+Starting Game 2
+move:  (1, (0,))
+move:  (1, [1, 2])
+move:  (1, (5,))
+move:  (0, [0, 1])
+move:  (0, (2,))
+move:  (1, [3, 4])
+move:  (0, (3, 4))
+
+Starting Game 3
+move:  (1, (4, 5))
+move:  (0, [0, 1])
+move:  (1, (0, 1))
+move:  (0, [2, 3])
+move:  (0, (4,))
+move:  (1, [2, 3])
+
+Starting Game 4
+move:  (1, (5,))
+move:  (1, [2, 3])
+move:  (0, (0,))
+move:  (1, [0, 1])
+move:  (0, (2, 3))
+move:  (1, [4])
+move:  (0, (1,))
+move:  (0, [4])
+
+Starting Game 5
+move:  (1, (0,))
+move:  (0, [0])
+move:  (1, (3, 4))
+move:  (1, [1, 2])
+move:  (0, (2, 3))
+move:  (1, [5])
+move:  (0, (1,))
+move:  (0, [4])
+
+Starting Game 6
+move:  (0, (4,))
+move:  (1, [2, 3])
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/kayles_two.py", line 1327, in <module>
+    simulate_kayles_games_two_piles(num_games, total_pins_pile1=5, total_pins_pile2=6)
+  File "/home/jihwan/NashIP/kayles_two.py", line 1317, in simulate_kayles_games_two_piles
+    winner = play_kayles_game_two_piles(total_pins_pile1, total_pins_pile2, verbose=True)
+  File "/home/jihwan/NashIP/kayles_two.py", line 1227, in play_kayles_game_two_piles
+    reasoning, move = get_move_dreamad(current_agent, current_agent, [pile1, pile2])
+  File "/home/jihwan/NashIP/kayles_two.py", line 1080, in get_move_dreamad
+    if is_valid_move(piles, pile_index, pin_indices):
+  File "/home/jihwan/NashIP/kayles_two.py", line 1266, in is_valid_move
+    pile = piles[pile_index]
+TypeError: list indices must be integers or slices, not NoneType
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1738249787.185357  713428 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.

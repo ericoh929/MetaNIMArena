@@ -1,0 +1,18 @@
+
+Starting Game 1
+
+Starting Game 1
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/kayles_two.py", line 1397, in <module>
+    simulate_kayles_games_two_piles(num_games, total_pins_pile1=5, total_pins_pile2=6)
+  File "/home/jihwan/NashIP/kayles_two.py", line 1387, in simulate_kayles_games_two_piles
+    winner = play_kayles_game_two_piles(total_pins_pile1, total_pins_pile2, verbose=True)
+  File "/home/jihwan/NashIP/kayles_two.py", line 1289, in play_kayles_game_two_piles
+    reasoning, move = get_consistent_move(current_agent, [pile1, pile2], self_consistency_count)
+  File "/home/jihwan/NashIP/kayles_two.py", line 404, in get_consistent_move
+    most_common_move = Counter(moves).most_common(1)[0][0]
+  File "/home/jihwan/anaconda3/envs/nip/lib/python3.9/collections/__init__.py", line 593, in __init__
+    self.update(iterable, **kwds)
+  File "/home/jihwan/anaconda3/envs/nip/lib/python3.9/collections/__init__.py", line 679, in update
+    _count_elements(self, iterable)
+TypeError: unhashable type: 'list'

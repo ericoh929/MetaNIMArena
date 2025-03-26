@@ -16,7 +16,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '4, 5'
 
 import os
 import google.generativeai as genai
-genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+gemini_api_keys = [
+    'AIzaSyB5lNkfPiDJMkwNrpAv3MHbnnFvkpuF7Ok',  # 첫 번째 API 키
+    'AIzaSyCYkix3fQio-WpUus7ziwNGhSk6qZp7LJs'   # 두 번째 API 키
+]
+selected_api_key = random.choice(gemini_api_keys)
+genai.configure(api_key=selected_api_key)
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),)
 
@@ -117,18 +122,7 @@ def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
 #         # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
 #         return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
 
-def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."):
-    """
-    Handles responses for different models based on the agent's configuration.
-
-    Parameters:
-        agent (dict): Dictionary containing agent details, including the model name.
-        prompt (str): The input prompt for the model.
-        system_prompt (str): The system-level instruction for the model.
-
-    Returns:
-        dict: Parsed content from the model's response in JSON format, or None if parsing fails.
-    """
+def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.", temperature=0.7):
     def parse_content(response, split_key):
         try:
             if split_key not in response:
@@ -158,7 +152,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
 
             elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
                 generation_config = {
-                    "temperature": 0.7,
+                    "temperature": temperature,
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 8192,
@@ -183,7 +177,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                         {"role": "user", "content": prompt},
                     ],
                     model=agent["model"],
-                    temperature=0.7,
+                    temperature=temperature,
                 )
                 content = response.choices[0].message.content
                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
@@ -203,6 +197,69 @@ agents = [
     {"name": "Agent 1", "model": args.agent1_model, "prompting_method": args.agent1_prompt},
     {"name": "Agent 2", "model": args.agent2_model, "prompting_method": args.agent2_prompt}
 ]
+
+def get_move(agent, piles):
+    remaining_pins = [
+        ''.join(['1' if pin else '0' for pin in pile]) for pile in piles
+    ]
+    prompt = f"""
+    # Game Role:
+    You are {agent['name']}, a participant in a game of Kayles.
+
+    # Objective:
+    Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
+
+    # Game Rule:
+    1. There are two rows of pins (piles).
+    2. On your turn, you can remove:
+       - A single pin from one pile.
+       - Two adjacent pins from one pile.
+    3. You cannot remove non-adjacent pins or pins that have already been removed.
+
+    # Current State:
+    The rows of pins are represented as binary strings: 
+    - '1' means the pin is still available.
+    - '0' means the pin has already been removed.
+    Current state:
+    Pile 1: "{remaining_pins[0]}"
+    Pile 2: "{remaining_pins[1]}"
+
+    # Task:
+    Based on the current state of the game, decide which pile and pin(s) you will take on this turn.
+
+    # Output:
+    Provide the action in the following JSON format:
+
+    ```
+    {{
+        "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2).
+        "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices.
+    }}
+    ```
+    """
+
+    retries = 0
+    while retries < max_retries:
+        parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Kayles player.")
+        reasoning = "None"
+
+        # Ensure the action is valid
+        pile_index = parsed_content.get("pile_index")
+        pin_indices = parsed_content.get("pin_indices")
+
+        if is_valid_move(piles, pile_index, pin_indices):
+            return reasoning, (pile_index, pin_indices)  # Exit loop if the action is valid
+
+        retries += 1
+
+    available_pins = [
+        (pile_index, idx) for pile_index, pile in enumerate(piles) for idx, pin in enumerate(pile) if pin
+    ]
+    if available_pins:
+        pile_index, pin_index = random.choice(available_pins)
+        pin_indices = [pin_index]
+        reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
+        return reasoning, (pile_index, pin_indices)
 
 def get_basic_move(agent, piles):
     remaining_pins = [
@@ -927,13 +984,22 @@ def get_move_with_debate(agent1, agent2, piles):
                     refined_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
 
             if i == 0:
-                initial_moves['agent1'] = (pile_index, pin_indices)
-                initial_reasonings['agent1'] = refined_reasoning
+                a0_action = (pile_index, tuple(pin_indices))
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
             if i == 1:
-                initial_moves['agent2'] = (pile_index, pin_indices)
-                initial_reasonings['agent2'] = refined_reasoning
-
+                a1_action = (pile_index, tuple(pin_indices))
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
             i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
 
         print('initial moves:: ', initial_moves)
         normalized_moves = {agent: (pile_index, tuple(pin_indices)) for agent, (pile_index, pin_indices) in initial_moves.items()}
@@ -942,204 +1008,233 @@ def get_move_with_debate(agent1, agent2, piles):
 
     return refined_reasoning, Counter(normalized_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
 
-
-def get_move_with_bias_mitigate_debate(agent1, agent2, piles):
+def get_move_dreamad(agent1, agent2, piles):
     initial_moves = {}
     initial_reasonings = {}
     i = 0
-    for agent in [agent1, agent2]:
+    for agent in [agent1]:
         remaining_pins = [
             ''.join(['1' if pin else '0' for pin in pile]) for pile in piles
         ]
+        prompt = f"""
+        # Game Role:
+        You are {agent['name']}, a participant in a game of Kayles.
+
+        # Objective:
+        Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
+
+        # Game Rule:
+        1. There are two rows of pins (piles).
+        2. On your turn, you can remove:
+           - A single pin from one pile.
+           - Two adjacent pins from one pile.
+        3. You cannot remove non-adjacent pins or pins that have already been removed.
+
+        # Current State:
+        The rows of pins are represented as binary strings: 
+        - '1' means the pin is still available.
+        - '0' means the pin has already been removed.
+        Current state:
+        Pile 1: "{remaining_pins[0]}"
+        Pile 2: "{remaining_pins[1]}"
+
+        # Task:
+        Based on the current state of the game, decide which pile and pin(s) you will take on this turn.
+        """
+        #################prompt1#################
+        game_prompt = f"""
+        Below is a game description. Extract key information.
+
+        **Game Description:**
+        {prompt}
+
+        ### Format Response as:
+        {{
+        "game_definition": "string", // What is the definition of this game?.
+        "winning_condition": "string", // How to win the game.
+        "move_constraints": "string" // What actions are allowed per turn.
+        }}
+        """
+    
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+        game_definition = parsed_content.get("game_definition")
+        winning_condition = parsed_content.get("winning_condition")
+        move_constraints = parsed_content.get("move_constraints")
+
+
+        strategy_prompt = f"""
+        Based on the game information below, derive the **optimal strategy**.
+
+        **Game:** {game_definition}  
+        **Winning Condition:** {winning_condition}  
+        **Move Constraints:** {move_constraints}
+
+        ### Format Response as:
+        {{
+        "state_evaluation": "string", // How to assess the game state.
+        "winning_strategy": "string", // Winning strategy in this turn to win this game.
+        "endgame_tactics": "string" // Best strategy in a near-win situation.}}
+        """
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+
+        state_evaluation = parsed_content.get("state_evaluation")
+        winning_strategy = parsed_content.get("winning_strategy")
+        endgame_tactics = parsed_content.get("endgame_tactics")
+
+
+    for agent in [agent1, agent2]:
+
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
+
+        **Game:** {game_definition}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
+
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
+
+        ### Format Response as:
+        ```
+        {{
+        "optimized_prompt": "string", // The refined prompt that clearly directs decision-making. 
+        }}
+        ```
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
+
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        one_new_prompt = f"""{optimized_prompt}\n
+
+        # Current State:
+        The rows of pins are represented as binary strings: 
+        - '1' means the pin is still available.
+        - '0' means the pin has already been removed.
+        Current state:
+        Pile 1: "{remaining_pins[0]}"
+        Pile 2: "{remaining_pins[1]}"
+    
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
+
+        # Output: Provide your reasoning for the move and the action in the following JSON format:
+        ```
+        {{
+            "reasoning": string  // Explain why you chose the pile and the pins to remove.
+            "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2). Do not print None type.
+            "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices. Do not print None type.
+        }}
+        ```
+        """
+
+        retries = 0
+        while retries < max_retries:
+            one_parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a game theorist and strategist.")
+            refined_reasoning = one_parsed_content.get("reasoning")
+            pile_index = one_parsed_content.get("pile_index")
+            pin_indices = one_parsed_content.get("pin_indices")
+
+            if is_valid_move(piles, pile_index, pin_indices):
+                break
+
+            retries += 1
+
+        if retries == max_retries:
+            available_pins = [
+                (pile_index, idx) for pile_index, pile in enumerate(piles) for idx, pin in enumerate(pile) if pin
+            ]
+            if available_pins:
+                pile_index, pin_index = random.choice(available_pins)
+                pin_indices = [pin_index]
+                refined_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
+
         if i == 0:
-            prompt = f"""
-            # Game Role:
-            You are {agent['name']}, a participant in a game of Kayles.
-
-            # Objective:
-            Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
-
-            # Game Rule:
-            1. There are two rows of pins (piles).
-            2. On your turn, you can remove:
-               - A single pin from one pile.
-               - Two adjacent pins from one pile.
-            3. You cannot remove non-adjacent pins or pins that have already been removed.
-
-            # Current State:
-            The rows of pins are represented as binary strings: 
-            - '1' means the pin is still available.
-            - '0' means the pin has already been removed.
-            Current state:
-            Pile 1: "{remaining_pins[0]}"
-            Pile 2: "{remaining_pins[1]}"
-
-            # Task:
-            Based on the current state of the game, decide which pile and pin(s) you will take on this turn.
-
-            # Output:
-            Provide your reasoning for the move and the action in the following JSON format:
-
-            ```
-            {{
-                "reasoning": string  // Explain why you chose the pile and the pins to remove.
-                "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2).
-                "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices.
-            }}
-            ```
-            """
-
-            retries = 0
-            while retries < max_retries:
-                parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Kayles player and debating the best action.")
-                initial_reasoning = parsed_content.get("reasoning")
-                pile_index = parsed_content.get("pile_index")
-                pin_indices = parsed_content.get("pin_indices")
-
-                if is_valid_move(piles, pile_index, pin_indices):
-                    break
-
-                retries += 1
-
-            if retries == max_retries:
-                available_pins = [
-                    (pile_index, idx) for pile_index, pile in enumerate(piles) for idx, pin in enumerate(pile) if pin
-                ]
-                if available_pins:
-                    pile_index, pin_index = random.choice(available_pins)
-                    pin_indices = [pin_index]
-                    initial_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
-
+            initial_moves['agent1'] = (pile_index, tuple(pin_indices))
+            initial_reasonings['agent1'] = refined_reasoning
+            one_prompt = optimized_prompt
         if i == 1:
-            text = f"""Given the following instruction, rewrite it to minimize bias stemming from strong prior knowledge while preserving its original intent and clarity.\n
-            #Instruction:{prompt}\n
-            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing ```json" and "```":\n\n```
-            {{
-                "instruction": string  // This is a rewritten instruction to minimize the bias.
-            }}
-            ```
-            """
+            initial_moves['agent2'] = (pile_index, tuple(pin_indices))
+            initial_reasonings['agent2'] = refined_reasoning
+            two_prompt = optimized_prompt
 
-            parsed_content = get_agent_response(agent, text, system_prompt="You are a rational smart assistant.")
-            new_instruction = parsed_content.get("instruction")
-
-            text = f"""{new_instruction}\n\n
-            # Output:
-            Provide your reasoning for the move and the action in the following JSON format:
-
-            ```
-            {{
-                "reasoning": string  // Explain why you chose the pile and the pins to remove.
-                "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2).
-                "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices.
-            }}
-            ```
-            """
-
-            retries = 0
-            while retries < max_retries:
-                parsed_content = get_agent_response(agent, text, system_prompt="You are a rational game player.")
-                initial_reasoning = parsed_content.get("reasoning")
-                pile_index = parsed_content.get("pile_index")
-                pin_indices = parsed_content.get("pin_indices")
-
-                if is_valid_move(piles, pile_index, pin_indices):
-                    break
-
-                retries += 1
-
-            if retries == max_retries:
-                available_pins = [
-                    (pile_index, idx) for pile_index, pile in enumerate(piles) for idx, pin in enumerate(pile) if pin
-                ]
-                if available_pins:
-                    pile_index, pin_index = random.choice(available_pins)
-                    pin_indices = [pin_index]
-                    initial_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
-
-        if i == 0:
-            initial_moves['agent1'] = (pile_index, pin_indices)
-            initial_reasonings['agent1'] = initial_reasoning
-        if i == 1:
-            initial_moves['agent2'] = (pile_index, pin_indices)
-            initial_reasonings['agent2'] = initial_reasoning
         i += 1
+
 
     for _ in range(debate_rounds):
         i = 0
         for agent in [agent1, agent2]:
             if i == 0:
-                remaining_pins = [
-                    ''.join(['1' if pin else '0' for pin in pile]) for pile in piles
-                ]
                 prompt = f"""
-                # Game Role:
-                You are {agent['name']}, a participant in a game of Kayles.
+                {one_prompt}\n
 
-                # Objective:
-                Your goal is to win the game by leaving your opponent with no valid moves. The player who takes the last pin(s) wins.
+                You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
 
-                # Game Rule:
-                1. There are two rows of pins (piles).
-                2. On your turn, you can remove:
-                   - A single pin from one pile.
-                   - Two adjacent pins from one pile.
-                3. You cannot remove non-adjacent pins or pins that have already been removed.
+                ### Instructions:
+                1. **If a winning move exists, take it immediately.**  
+                2. **Otherwise, follow optimal move principles.**  
+                3. Justify your move using the extracted strategy.
 
-                # Current State:
-                The rows of pins are represented as binary strings: 
-                - '1' means the pin is still available.
-                - '0' means the pin has already been removed.
-                Current state:
-                Pile 1: "{remaining_pins[0]}"
-                Pile 2: "{remaining_pins[1]}"
-
-                # Task:
-                Based on the current state of the game, decide which pile and pin(s) you will take on this turn.
-
-                You initially chose {initial_moves['agent1'][1]} from Pile {initial_moves['agent1'][0] + 1} at first trial by the reason: '{initial_reasonings['agent1']}'.
-                Other agent argues that you have to choose move as: {initial_moves['agent2'][1]} from Pile {initial_moves['agent2'][0] + 1} by the reason: {initial_reasonings['agent2']}.
-                Considering the other's opinion, refine or confirm your move.
-
-                # Output:
+                # Output: 
                 Provide your reasoning for the move and the action in the following JSON format:
-
                 ```
                 {{
                     "reasoning": string  // Explain why you chose the pile and the pins to remove.
-                    "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2).
-                    "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices.
+                    "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2). Do not print None type.
+                    "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices. Do not print None type.
                 }}
                 ```
                 """
-
             if i == 1:
-                remaining_pins = [
-                    ''.join(['1' if pin else '0' for pin in pile]) for pile in piles
-                ]
+                # Current State:
+                # The rows of pins are represented as binary strings: 
+                # - '1' means the pin is still available.
+                # - '0' means the pin has already been removed.
+                # Current state:
+                # Pile 1: "{remaining_pins[0]}"
+                # Pile 2: "{remaining_pins[1]}"
                 prompt = f"""
-                {new_instruction}\n\n
-                You initially chose {initial_moves['agent2'][1]} from Pile {initial_moves['agent2'][0] + 1} at first trial by the reason: '{initial_reasonings['agent2']}'.
-                Other agent argues that you have to choose move as: {initial_moves['agent1'][1]} from Pile {initial_moves['agent1'][0] + 1} by the reason: {initial_reasonings['agent1']}.
-                Considering the other's opinion, refine or confirm your move.
+                {two_prompt}\n
+                
+                You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+                ### Instructions:
+                1. **If a winning move exists, take it immediately.**  
+                2. **Otherwise, follow optimal move principles.**  
+                3. Justify your move using the extracted strategy.
 
                 # Output:
                 Provide your reasoning for the move and the action in the following JSON format:
-
                 ```
                 {{
                     "reasoning": string  // Explain why you chose the pile and the pins to remove.
-                    "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2).
-                    "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices.
+                    "pile_index": integer,  // Index of the pile (0 for Pile 1, 1 for Pile 2). Do not print None type.
+                    "pin_indices": list     // A list of integers representing the indices (0-based) of the pins you will remove. Valid moves include single pins or two adjacent pins. Only provide valid indices. Do not print None type.
                 }}
                 ```
                 """
-
             retries = 0
             while retries < max_retries:
-                parsed_content = get_agent_response(agent, prompt, system_prompt="You are a rational game player and debating the best action.")
-                initial_reasoning = parsed_content.get("reasoning")
-                initial_action = parsed_content.get("action")
+                one_parsed_content = get_agent_response(agent, prompt, system_prompt="You are a game theorist and strategist.")
+                # print('output:', one_parsed_content)
+                refined_reasoning = one_parsed_content.get("reasoning")
+                pile_index = one_parsed_content.get("pile_index")
+                pin_indices = one_parsed_content.get("pin_indices")
+                # print('pile index: ', pile_index)
+                # print('pin indices: ', pin_indices)
 
                 if is_valid_move(piles, pile_index, pin_indices):
                     break
@@ -1153,26 +1248,35 @@ def get_move_with_bias_mitigate_debate(agent1, agent2, piles):
                 if available_pins:
                     pile_index, pin_index = random.choice(available_pins)
                     pin_indices = [pin_index]
-                    initial_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
-            
+                    refined_reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
+
             if i == 0:
-                initial_moves['agent1'] = initial_action
-                initial_reasonings['agent1'] = initial_reasoning
+                a0_action = (pile_index, tuple(pin_indices))
+                a0_reasoning = refined_reasoning
+                
             if i == 1:
-                initial_moves['agent2'] = initial_action
-                initial_reasonings['agent2'] = initial_reasoning
-
+                a1_action = (pile_index, tuple(pin_indices))
+                a1_reasoning = refined_reasoning
+        
             i += 1
-            
-        if len(set(initial_moves.values())) == 1:
-            return initial_reasoning, initial_action
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
 
-    return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+        normalized_moves = {agent: (pile_index, tuple(pin_indices)) for agent, (pile_index, pin_indices) in 
+        initial_moves.items()}
+        # print('normal moves: ', normalized_moves)
+        if len(set(normalized_moves.values())) == 1:
+            return refined_reasoning, initial_moves['agent1']
 
+    return refined_reasoning, Counter(normalized_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+
+
+import random
 
 def play_kayles_game_two_piles(total_pins_pile1, total_pins_pile2, verbose=False):
     with open(f'/home/jihwan/NashIP/result/2K/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
-        # Initialize two piles of pins
         pile1 = [True] * total_pins_pile1
         pile2 = [True] * total_pins_pile2
         turn = 0
@@ -1187,26 +1291,31 @@ def play_kayles_game_two_piles(total_pins_pile1, total_pins_pile2, verbose=False
                 reasoning, move = get_move_with_reflection(current_agent, [pile1, pile2])
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, [pile1, pile2])
+            elif current_agent["prompting_method"] == "dreamad":
+                reasoning, move = get_move_dreamad(current_agent, current_agent, [pile1, pile2])
             elif current_agent["prompting_method"] == "bias_removed":
                 reasoning, move = bias_removed(current_agent, [pile1, pile2])
             elif current_agent["prompting_method"] == "bias_mitigated":
                 reasoning, move = bias_mitigated(current_agent, [pile1, pile2])
             elif current_agent["prompting_method"] == "basic":
                 reasoning, move = get_basic_move(current_agent, [pile1, pile2])
-            elif current_agent["prompting_method"] == "bias_mitigate_debate":
-                reasoning, move = get_move_with_bias_mitigate_debate(current_agent, current_agent, [pile1, pile2])
+            elif current_agent["prompting_method"] == "simple":
+                reasoning, move = get_move(current_agent, [pile1, pile2])
             else:
                 print("Error: set the prompting methods")
                 return None
+            
+            print('move: ', move)
 
             pile_index, pin_indices = move
 
-            # Validate the move
+            # ✅ 유효하지 않은 이동이면 랜덤한 유효한 액션 수행
             if not is_valid_move([pile1, pile2], pile_index, pin_indices):
-                print(f"Invalid move by {current_agent['name']}.", file=f)
-                return other_agent["name"]
+                print(f"Invalid move by {current_agent['name']}. Choosing random valid move.", file=f)
+                move = get_random_valid_move_two_piles([pile1, pile2])  # 랜덤 액션 수행
+                pile_index, pin_indices = move
 
-            # Apply the move
+            # ✅ 랜덤 선택한 액션 적용
             apply_move([pile1, pile2], pile_index, pin_indices)
 
             if verbose:
@@ -1222,10 +1331,12 @@ def play_kayles_game_two_piles(total_pins_pile1, total_pins_pile2, verbose=False
 
 
 def is_valid_move(piles, pile_index, move):
+    """ 선택한 핀이 유효한지 확인 """
+    # print('piles, pile index, move: ', piles, pile_index, move)
     pile = piles[pile_index]
-    if len(move) == 1:  # Single pin removal
+    if len(move) == 1:  # 단일 핀 제거
         return 0 <= move[0] < len(pile) and pile[move[0]]
-    elif len(move) == 2:  # Adjacent pin removal
+    elif len(move) == 2:  # 인접한 두 핀 제거
         return (
             0 <= move[0] < len(pile)
             and 0 <= move[1] < len(pile)
@@ -1237,13 +1348,36 @@ def is_valid_move(piles, pile_index, move):
 
 
 def apply_move(piles, pile_index, move):
+    """ 선택한 핀 제거 """
     pile = piles[pile_index]
     for index in move:
         pile[index] = False
 
 
-# Run the simulation
+def get_random_valid_move_two_piles(piles):
+    """ 랜덤한 유효한 액션 선택 (가능하면 두 개의 인접한 핀 제거, 그렇지 않으면 하나만 제거) """
+    available_pins_pile1 = [i for i, pin in enumerate(piles[0]) if pin]
+    available_pins_pile2 = [i for i, pin in enumerate(piles[1]) if pin]
 
+    if not available_pins_pile1 and not available_pins_pile2:
+        return None  # 모든 핀이 제거됨
+
+    # ✅ 무작위로 하나의 더미(pile) 선택
+    chosen_pile = 0 if (available_pins_pile1 and (not available_pins_pile2 or random.random() < 0.5)) else 1
+    available_pins = available_pins_pile1 if chosen_pile == 0 else available_pins_pile2
+
+    # ✅ 인접한 두 개의 핀을 선택할 확률 50%
+    if len(available_pins) > 1:
+        random.shuffle(available_pins)
+        for i in range(len(available_pins) - 1):
+            if available_pins[i] + 1 == available_pins[i + 1]:  # 인접한 핀 찾기
+                return (chosen_pile, (available_pins[i], available_pins[i + 1]))
+
+    # ✅ 그렇지 않으면 단일 핀 제거
+    return (chosen_pile, (random.choice(available_pins),))
+
+
+# Run the simulation
 def simulate_kayles_games_two_piles(num_games, total_pins_pile1, total_pins_pile2):
     win_counts = {agent["name"]: 0 for agent in agents}
     with open(f'/home/jihwan/NashIP/result/2K/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
@@ -1253,10 +1387,11 @@ def simulate_kayles_games_two_piles(num_games, total_pins_pile1, total_pins_pile
             winner = play_kayles_game_two_piles(total_pins_pile1, total_pins_pile2, verbose=True)
             if winner:
                 win_counts[winner] += 1
-        
+
         print("\nGame Results:", file=f)
         for agent in agents:
             win_rate = (win_counts[agent["name"]] / num_games) * 100
             print(f"{agent['name']} Win Rate: {win_rate:.2f}% ({win_counts[agent['name']]} wins out of {num_games})", file=f)
+
 
 simulate_kayles_games_two_piles(num_games, total_pins_pile1=5, total_pins_pile2=6)

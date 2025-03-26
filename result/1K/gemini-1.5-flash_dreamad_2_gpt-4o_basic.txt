@@ -1,0 +1,848 @@
+Reasoning: The optimal strategy for Kayles is to leave your opponent with a nim-sum of zero.  A board with 20 pins has a non-zero nim-sum. Removing a single pin results in a board with 19 pins, which has a Grundy value of 1. Removing two adjacent pins results in a board with 18 pins, which has a Grundy value of 2.  Removing the first pin (index 0) leaves the opponent with 19 pins, resulting in a nim-sum of 1 (which is not zero). Removing the first two pins leaves 18 pins, resulting in a nim-sum of 2 (which is not zero). However, any move will leave the opponent in a position that they cannot win from. Therefore, arbitrarily removing the first pin is a winning move. 
+Action: (0,)
+Agent 1 (gemini-1.5-flash) removes (0,). Pins remaining: [False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state of the pins is '01111111111111111111'. My opponent has left me in a position where the first pin is already removed, allowing me to consider either removing a single pin or two adjacent pins from the remaining sequence. To create a more challenging position for my opponent and reduce their options, I choose to remove two adjacent pins. By removing the pins at indices 1 and 2, I create a larger gap at the beginning of the sequence, disrupting the continuity and limiting the opponent's future options. 
+Action: [1, 2]
+Agent 2 (gpt-4o) removes [1, 2]. Pins remaining: [False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current board state is "00011111111111111111". There is one block of 18 consecutive pins. The nim-sum of this block is 18. To achieve a nim-sum of zero, we need to split this block into sub-blocks with nim-sums that add up to zero. Removing pins at indices 3 and 4 (or any two adjacent pins) results in a nim-sum of zero. This guarantees a win if both players play optimally.  The other agent's reasoning supports this conclusion, focusing on reducing the nim-sum to zero by breaking the single block. 
+Action: (3, 4)
+Agent 1 (gemini-1.5-flash) removes (3, 4). Pins remaining: [False, False, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state has a single block of 1s from index 5 to index 19, making it 15 consecutive pins. By removing two adjacent pins, I can leave a pile of 13 pins, which is a losing position for the opponent if I continue to play optimally. I will remove the pins at indices 5 and 6 to achieve this. 
+Action: [5, 6]
+Agent 2 (gpt-4o) removes [5, 6]. Pins remaining: [False, False, False, False, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current board state has a single block of 12 pins.  The nim-sum is 12 (which is not 0). Removing a single pin at index 11 will result in blocks of lengths 11 and 1. The nim-sum of 11 and 1 is 11 ^ 1 = 10 which is not 0. Removing a single pin at index 7 will result in blocks of lengths 7 and 11. The nim-sum of 7 and 11 is 7 ^ 11 = 6 which is not 0. Removing two pins at indices 7 and 8 will result in blocks of lengths 6 and 6. The nim-sum of 6 and 6 is 6 ^ 6 = 0. Therefore, removing pins at indices 7 and 8 is a winning move. Removing a single pin at index 11 results in blocks of length 11 and 1; nim-sum is 10. Removing a single pin at index 7 results in blocks of length 7 and 11; nim-sum is 6. Removing two pins at indices 7 and 8 results in blocks of length 6 and 6; nim-sum is 0.  Therefore, [7,8] is the optimal move. 
+Action: (7, 8)
+Agent 1 (gemini-1.5-flash) removes (7, 8). Pins remaining: [False, False, False, False, False, False, False, False, False, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state '00000000011111111111' shows a block of 10 consecutive pins at the end. In such a situation, removing two adjacent pins is often a strong strategy to leave the opponent with fewer options and potentially reach a winning position faster. Removing the first two pins from the block (indices 9 and 10) reduces the block size to 8, leaving fewer options for the opponent and aiming to control the game by managing the block sizes effectively. 
+Action: [9, 10]
+Agent 2 (gpt-4o) removes [9, 10]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, True, True, True, True]
+Invalid move by Agent 1. Choosing random valid move.
+Reasoning: The current board state has a single block of 11 pins. Removing the last pin or the last two adjacent pins will directly lead to victory because it leaves the opponent with no valid moves.  Therefore, removing the last pin at index 21 is the optimal move.  While removing pins at indices 11 and 12 results in a nim-sum of 0, it does not directly lead to victory and thus is not prioritized over a simple winning move. 
+Action: (18, 19)
+Agent 1 (gemini-1.5-flash) removes (18, 19). Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, True, True, False, False]
+Reasoning: The current state of the game is '00000000000111111100', which means there is a sequence of six '1's starting from index 11 to index 16. To maximize my strategic advantage, I will remove two adjacent pins from this sequence. This will reduce the number of consecutive pins and potentially leave my opponent with fewer options. Removing the first two pins in this sequence (indices 11 and 12) will break the sequence into smaller parts, making it more challenging for my opponent to find advantageous moves. 
+Action: [11, 12]
+Agent 2 (gpt-4o) removes [11, 12]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, False, False]
+Reasoning: The current board state is "00000000000001111100". The maximal blocks of consecutive pins have lengths [4]. The nim-sum is 4. Removing pins at indices 14 and 15 will result in a nim-sum of 0.  The resulting board state is "00000000000001100000", which has maximal blocks of length [1, 1, 1, 1]. The nim-sum of these lengths is 1 ^ 1 ^ 1 ^ 1 = 0. This guarantees a win for the current player. Removing 15 and 16 would also result in a nim sum of 0. 
+Action: (14, 15)
+Agent 1 (gemini-1.5-flash) removes (14, 15). Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, True, False, False]
+Reasoning: In the current state, '00000000000001001100', the only available pins are at indices 12, 15, 16, and 17. To maximize my advantage, I'll remove two adjacent pins, which reduces my opponent's options and maintains my lead. Removing the pins at indices 16 and 17 is preferable to removing 15 and 16 because it leaves my opponent with fewer ways to create separate groups of pins, potentially forcing them into a disadvantageous position. 
+Action: [16, 17]
+Agent 2 (gpt-4o) removes [16, 17]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, False, False, False, False]
+Reasoning: The board state "00000000000001000000" has only one pin available at index 15. Removing this pin will leave the opponent with no valid moves, resulting in a win for Agent 1. The nim-sum calculation is trivial in this case as there are no blocks of consecutive pins after the move.  The other agent's suggestion of index 13 is incorrect; there is no pin at that index. 
+Action: (13,)
+Agent 1 (gemini-1.5-flash) removes (13,). Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+Agent 1 (gemini-1.5-flash) wins!
+Reasoning: Both [0] and [20,21] are winning moves.  Removing the first pin ([0]) leaves the opponent in a position where they cannot win.  Similarly, removing the last two pins ([20, 21]) immediately wins the game.  While [20,21] guarantees an immediate win, [0] is a winning move that might be more difficult for an opponent to recognize as a losing position, making it potentially a stronger move from a strategic perspective. For simplicity and consistency in choosing a single winning move,  I will select [0]. 
+Action: (0,)
+Agent 1 (gemini-1.5-flash) removes (0,). Pins remaining: [False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state of the pins is '01111111111111111111'. To make a strong move, I want to reduce the opponent's future options and potentially leave them with a losing configuration. By removing two adjacent pins from the start, I create a gap and leave a smaller, more manageable section of pins. Removing the two pins at indices 1 and 2 leaves the sequence '0001111111111111111', which breaks the long chain into a smaller segment and may lead to more strategic splits in future turns. 
+Action: [1, 2]
+Agent 2 (gpt-4o) removes [1, 2]. Pins remaining: [False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The nim-sum of the current state is 0 because there are 16 ones, and an even number of ones results in a nim-sum of 0.  There is no move that will guarantee a nim-sum of 0 for the opponent. Removing a single pin or two adjacent pins will always leave the opponent with an odd number of pins and a nim-sum of 1.  Therefore, any move that leaves an odd number of pins is acceptable. Removing pins at indices 21 and 22 is a valid move that leaves the opponent with 14 pins (an even number), resulting in a nim-sum of 0 for the opponent.  This is a strategically sound move as it avoids a directly losing position. Although it doesn't guarantee a win, it creates a more balanced and less predictable game state. 
+Action: (3,)
+Agent 1 (gemini-1.5-flash) removes (3,). Pins remaining: [False, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state shows a continuous block of 16 pins available starting at index 4. To maximize strategic advantage and reduce the potential moves for my opponent, I will choose to remove two adjacent pins from the middle of this block. This will create two separate smaller segments of pins, making it harder for my opponent to plan optimal moves. Removing pins at indices 11 and 12 creates two separate segments of equal length, potentially leading to a strategic advantage in future moves. 
+Action: [11, 12]
+Agent 2 (gpt-4o) removes [11, 12]. Pins remaining: [False, False, False, False, True, True, True, True, True, True, True, False, False, True, True, True, True, True, True, True]
+Invalid move by Agent 1. Choosing random valid move.
+Reasoning: The current game state is "00001111111001111111". Removing pins at indices 10 and 11 creates a position where the opponent has no winning move.  This is a forced win.  The resulting state will have isolated groups of pins, making it a losing position for the opponent. This strategy aligns with the principles of Kayles, aiming to leave the opponent with an even number of isolated groups or a state with no winning moves. 
+Action: (13, 14)
+Agent 1 (gemini-1.5-flash) removes (13, 14). Pins remaining: [False, False, False, False, True, True, True, True, True, True, True, False, False, False, False, True, True, True, True, True]
+Reasoning: The current state has two separate segments of available pins: '111111' and '1111'. By removing two adjacent pins from the longer segment, I can potentially create a situation where the remaining sections are of equal or smaller length, making it harder for my opponent to find a strategic move. This also reduces the total number of available pins, pushing the game closer to an endgame scenario where I can better control the outcome. I will remove the first two pins from the '111111' segment to split it into '1111' and '11'. 
+Action: [4, 5]
+Agent 2 (gpt-4o) removes [4, 5]. Pins remaining: [False, False, False, False, False, False, True, True, True, True, True, False, False, False, False, True, True, True, True, True]
+Reasoning: Both removing pins at indices [18, 19] and [16, 17] result in a game state with a Grundy value of 0. The optimal strategy in Kayles is to leave the opponent with a Grundy value of 0, thus guaranteeing a win.  To maintain consistency and simplicity in the strategy, and avoid potential complications arising from the specific game state, selecting [18, 19] is preferred. 
+Action: (18, 19)
+Agent 1 (gemini-1.5-flash) removes (18, 19). Pins remaining: [False, False, False, False, False, False, True, True, True, True, True, False, False, False, False, True, True, True, False, False]
+Reasoning: The current state of the pins is '00000011111000011100'. My goal is to leave my opponent with a position that is harder to win from. Right now, there are two clusters of consecutive '1's: '11111' at indices 6-10 and '111' at indices 15-17. By removing the two adjacent pins at indices 9 and 10, the first cluster is split into a group of three '1's ('111' at indices 6-8) and a single '1' at index 11. This reduces the complexity of the first cluster and creates a balance between the two groups of '1's, making it more strategic for me in subsequent moves. 
+Action: [9, 10]
+Agent 2 (gpt-4o) removes [9, 10]. Pins remaining: [False, False, False, False, False, False, True, True, True, False, False, False, False, False, False, True, True, True, False, False]
+Invalid move by Agent 1. Choosing random valid move.
+Reasoning: Both [10, 11] and [11, 12] are winning moves because they leave the opponent with a losing position.  The resulting state in both cases is "00000011100000000000", which consists of two independent sub-games. Each sub-game has a number of pins that is a multiple of 3. The winning strategy for Kayles is to leave a number of pins that is a multiple of 3 for the opponent in each sub-game. Since both moves achieve this, either is a winning move.  To demonstrate understanding of the opponent's strategy and for consistency, I choose [10, 11]. 
+Action: (6,)
+Agent 1 (gemini-1.5-flash) removes (6,). Pins remaining: [False, False, False, False, False, False, False, True, True, False, False, False, False, False, False, True, True, True, False, False]
+Reasoning: The current state of the game is '00000001100000011100'. There are two clusters of pins: one starting at index 7 ('110') and another one at index 16 ('111'). I will remove the two adjacent pins at indices 7 and 8 ('11') to create a more fragmented state. This move will leave isolated pins, making it harder for my opponent to make strategic plays and potentially forcing them into a losing position in future turns. 
+Action: [7, 8]
+Agent 2 (gpt-4o) removes [7, 8]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, False, False]
+Reasoning: The current board state is "00000000000000011100". The maximal blocks of consecutive pins are of length 3. The nim-sum is 3 (3).  Removing pins at indices 16 and 17 will leave the opponent with a nim-sum of 0, guaranteeing a win for Agent 1. Removing only pin 17 leaves two blocks of size 1 and 1, resulting in a nim-sum of 2, which is not a win. Therefore, removing two pins (16,17) is the optimal winning move. 
+Action: (17,)
+Agent 1 (gemini-1.5-flash) removes (17,). Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, False, False, False]
+Reasoning: In the current state '00000000000000011000', there are only two available pins left at indices 15 and 16. Removing both of these adjacent pins will leave the board entirely empty, ensuring that my opponent has no valid moves left. This guarantees a win for me, as the player who takes the last pin(s) wins the game. 
+Action: [15, 16]
+Agent 2 (gpt-4o) removes [15, 16]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+Agent 2 (gpt-4o) wins!
+Reasoning: In Kayles, the optimal strategy is to leave your opponent with a position that has a Grundy value of 0.  The current state is a sequence of 20 pins, which has a non-zero Grundy value. Removing the first two pins ([0, 1]) results in a sequence of 18 pins.  While the exact Grundy values for large sequences aren't readily available, the strategy of leaving the opponent with a position with a Grundy value of 0 is sound.  Removing the first pin alone would leave the opponent with a position that also has a non-zero Grundy value, making it a less optimal choice.  The strategy should aim to reduce the nim-sum to 0, and removing two adjacent pins often achieves this effectively. 
+Action: (0, 1)
+Agent 1 (gemini-1.5-flash) removes (0, 1). Pins remaining: [False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state is '00111111111111111111', which means the first two pins are already removed. The remaining pins form a large block of 18 consecutive pins. A strategic move in Kayles is often to leave your opponent with positions that are either losing or can be easily transformed into losing positions on subsequent turns. By removing two adjacent pins from the start of this block, it creates a smaller manageable block for me to control in future turns. 
+Action: [2, 3]
+Agent 2 (gpt-4o) removes [2, 3]. Pins remaining: [False, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The optimal strategy in Kayles involves creating nim-sums of zero for the opponent.  The current state "00001111111111111111" has 16 consecutive pins. Removing two adjacent pins in the middle, at indices 7 and 8, creates two smaller, independent games of 7 and 8 pins respectively. Both nim(7) and nim(8) are 0, resulting in a nim-sum of 0 for the opponent.  This guarantees a win for the current player.  While removing pins at indices 4 and 5 also leads to a nim-sum of 0 (creating groups of 4 and 12), the [7,8] move is more directly obvious and simpler to calculate, making it a more robust choice.  The nim-sum calculation is based on the fact that the nim-sum of the sizes of the independent groups is the nim-sum of the entire game.  A nim-sum of 0 is a losing position for the opponent. 
+Action: (7, 8)
+Agent 1 (gemini-1.5-flash) removes (7, 8). Pins remaining: [False, False, False, False, True, True, True, False, False, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The state '00001110011111111111' can be broken down into segments of available pins: '111', '0', and '1111111111'. The first segment '111' consists of three consecutive pins and removing all three would be optimal, but the rules allow only one or two pins to be removed. Thus, removing two adjacent pins from the first segment will leave the opponent with fewer options on their next turn. It also maintains more flexibility for larger moves in the larger segment '1111111111'. Therefore, I will remove the two adjacent pins at indices 4 and 5, which are part of the first segment. 
+Action: [4, 5]
+Agent 2 (gpt-4o) removes [4, 5]. Pins remaining: [False, False, False, False, False, False, True, False, False, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current board state is "00000010011111111111". The maximal blocks of consecutive pins have lengths [1, 10]. The nim-sum is 1 ^ 10 = 11.  There is no move that results in a nim-sum of 0.  Removing pin at index 6 results in "00000000011111111111", with block lengths [10]. Nim-sum = 10. Removing pins at indices 10 and 11 results in "00000010000111111111", with block lengths [1, 9]. Nim-sum = 10. Removing pins at indices 8 and 9 results in "00000010000111111111", with block lengths [1, 9]. Nim-sum = 10.  Since there is no move resulting in a nim-sum of 0, I will prioritize a move that simplifies the board and aims for an endgame with isolated pins or pairs. Removing the pin at index 6 reduces the larger block, making the board easier to analyze and reducing the opponent's options. This is a reasonable move as it simplifies the game state and helps to move towards a more manageable endgame. 
+Action: (10, 11)
+Agent 1 (gemini-1.5-flash) removes (10, 11). Pins remaining: [False, False, False, False, False, False, True, False, False, True, False, False, True, True, True, True, True, True, True, True]
+Reasoning: In the current state '00000010010011111111', I want to make a move that leaves my opponent in a difficult position. The longest continuous sequence of '1's is '111111' at the end. By removing two adjacent pins from this sequence, I can create multiple separated segments, making it harder for my opponent to find advantageous moves. I'll remove the pins at indices 15 and 16 to break the sequence into smaller parts. 
+Action: [15, 16]
+Agent 2 (gpt-4o) removes [15, 16]. Pins remaining: [False, False, False, False, False, False, True, False, False, True, False, False, True, True, True, False, False, True, True, True]
+Invalid move by Agent 1. Choosing random valid move.
+Reasoning: The board state is "00000010010011100111".  This breaks down into independent groups: [6], [8], [10, 11, 12], [14, 15, 16, 17]. Their Grundy values are 1, 1, 3, 3 respectively. The nim-sum is 1 ^ 1 ^ 3 ^ 3 = 0. This is a losing position.  To win, we must leave our opponent in a losing position (nim-sum of 0). Removing pin 6 results in groups [8], [10, 11, 12], [14, 15, 16, 17], with Grundy values 1, 3, 3. The nim-sum is 1 ^ 3 ^ 3 = 1. Removing pins 16 and 17 results in groups [6], [8], [10, 11, 12], [14, 15], with Grundy values 1, 1, 3, 2. The nim-sum is 1 ^ 1 ^ 3 ^ 2 = 1.  However, a closer examination reveals that removing only pin 6 (index 6) changes the nim sum to 1, leaving the opponent with a winning position.  Therefore, the optimal move is to remove pins 16 and 17, even though it initially seems to result in a nim-sum of 1 for the opponent.  This is because the opponent's options after this move lead to losing positions for them, ultimately securing a win for the current player. 
+Action: (6,)
+Agent 1 (gemini-1.5-flash) removes (6,). Pins remaining: [False, False, False, False, False, False, False, False, False, True, False, False, True, True, True, False, False, True, True, True]
+Reasoning: In the current state '00000000010011100111', the strategy is to minimize the options for the opponent while keeping the game balanced. One approach is to break larger groups of pins into smaller, less advantageous configurations for the opponent. The segment '111' at the end of the string can be broken down by removing two adjacent pins. Removing the two adjacent pins at indices 18 and 19 will leave a single pin for the opponent to deal with, which is generally less advantageous. 
+Action: [18, 19]
+Agent 2 (gpt-4o) removes [18, 19]. Pins remaining: [False, False, False, False, False, False, False, False, False, True, False, False, True, True, True, False, False, True, False, False]
+Invalid move by Agent 1. Choosing random valid move.
+Reasoning: The optimal move is to remove the pin at index 10. This leaves the opponent with only isolated pins, which is a guaranteed losing position in Kayles. Removing pins 11 and 12, while a winning move, leaves more possibilities for the opponent compared to isolating all the remaining pins. Prioritizing moves that lead to a win, and considering the opponent's argument for isolating all remaining pins to ensure a loss, the single removal at index 10 is the most effective winning strategy. 
+Action: (9,)
+Agent 1 (gemini-1.5-flash) removes (9,). Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, False, False, True, False, False]
+Reasoning: In the current state, '00000000000011100100', the only available pins are in segments '111' and '1'. The optimal strategy is to leave the opponent with a difficult position. Removing two adjacent pins from the '111' segment leaves them with a single isolated pin, making it harder for them to make a strategic move. Therefore, I will remove the two adjacent pins at indices 12 and 13. 
+Action: [12, 13]
+Agent 2 (gpt-4o) removes [12, 13]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False, True, False, False]
+Invalid move by Agent 1. Choosing random valid move.
+Reasoning: Removing pins at indices 18 and 19 leaves the opponent with no valid moves, guaranteeing a win. This is a superior strategy to removing only the pin at index 16, as it directly secures victory.  The opponent would then have no legal moves. While removing pin 16 is a winning move, it's not as decisive as removing both pins 18 and 19. 
+Action: (14,)
+Agent 1 (gemini-1.5-flash) removes (14,). Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, True, False, False]
+Reasoning: In the current state, there is only one pin left at index 17 (counting from 0). Removing this pin will leave the opponent with no pins to play, thereby winning the game. 
+Action: [17]
+Agent 2 (gpt-4o) removes [17]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False, False]
+Agent 2 (gpt-4o) wins!
+Reasoning: In Kayles, the optimal strategy often involves leaving your opponent with a Nim-sum of zero.  Removing a single pin at index 0 leaves 21 pins. The number 21 is divisible by 3, which is a losing position for the next player according to the Kayles winning strategy.  Therefore, removing the pin at index 0 guarantees a win for the current player.  
+Action: (0,)
+Agent 1 (gemini-1.5-flash) removes (0,). Pins remaining: [False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state of the pins is '01111111111111111111', which means there are 19 consecutive pins starting from index 1. A winning strategy in Kayles involves leaving the opponent with a position that is difficult to win from, ideally a position that is a losing configuration. The concept of Grundy numbers helps in determining such configurations. For a long chain of pins, removing two adjacent pins from the start or end is often beneficial as it breaks the symmetry and potentially reduces the game to known losing positions. Here, removing the first two pins (indices 1 and 2) results in two separate chains of 8 pins and leaves a single pin at the end, increasing the complexity for the opponent. 
+Action: [1, 2]
+Agent 2 (gpt-4o) removes [1, 2]. Pins remaining: [False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The optimal strategy in Kayles is to leave the opponent in a losing position. A sequence of 16 consecutive 1s is a winning position. Removing two adjacent pins within this sequence will leave a sequence of 14 ones, which is a known losing position for the next player.  Both removing pins at indices (3,4) and (6,7) achieve this. However, choosing (6,7) breaks the symmetry of the board and might lead to a more robust winning strategy in more complex scenarios. While the nim-sum difference might be negligible in this simple case, it could be more significant in longer games. Therefore, (6,7) is slightly preferred. 
+Action: (3, 4)
+Agent 1 (gemini-1.5-flash) removes (3, 4). Pins remaining: [False, False, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: In the current state '00000111111111111111', there is a continuous block of 15 pins starting from index 5. The optimal strategy in the game of Kayles is to create a position where the opponent has fewer favorable moves. By taking two adjacent pins, we can reduce the number of available pins for the opponent and potentially create multiple separate segments of pins, making it more difficult for them to play optimally. Therefore, I will remove the two adjacent pins at indices 5 and 6 to start splitting the available pins. 
+Action: [5, 6]
+Agent 2 (gpt-4o) removes [5, 6]. Pins remaining: [False, False, False, False, False, False, False, True, True, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current board state has one block of 12 consecutive pins. The nim-sum of this block is 12, which is non-zero. Removing pins at indices 7 and 8 will create two blocks of length 6 and 6. The nim-sum of these blocks is 6 ^ 6 = 0, guaranteeing a win. 
+Action: (7, 8)
+Agent 1 (gemini-1.5-flash) removes (7, 8). Pins remaining: [False, False, False, False, False, False, False, False, False, True, True, True, True, True, True, True, True, True, True, True]
+Reasoning: The current state is '00000000011111111111', which means there are 10 consecutive pins available to be removed. A strategic move in Kayles is to aim for creating isolated groups of pins or leaving an odd number of pins to the opponent, which can potentially lead to a winning position. By removing two adjacent pins, we can create a manageable situation for the next moves. Removing the first two pins in the sequence (indices 9 and 10) will leave the opponent with 8 pins, which is an even number and offers better control for future moves. 
+Action: [9, 10]
+Agent 2 (gpt-4o) removes [9, 10]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, True, True, True, True]
+Reasoning: Removing pins at indices 11 and 12 leaves the opponent with a state that has no winning moves. This guarantees a win for Agent 1. 
+Action: (11, 12)
+Agent 1 (gemini-1.5-flash) removes (11, 12). Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, True, True, True, True, True]
+Reasoning: The current state '00000000000001111111' shows that there are 8 consecutive pins available starting from index 12. To ensure a strategic advantage and potentially control the game, I will remove two adjacent pins from the middle of this sequence. By doing so, I create separate groups of pins that will force the opponent to make moves that I can counter effectively. Removing pins at indices 15 and 16 will split the sequence into two smaller groups, making it more challenging for my opponent to make advantageous moves. 
+Action: [15, 16]
+Agent 2 (gpt-4o) removes [15, 16]. Pins remaining: [False, False, False, False, False, False, False, False, False, False, False, False, False, True, True, False, False, True, True, True]
+
+Starting Game 1
+
+Starting Game 2
+
+Starting Game 3
+
+Starting Game 4
+
+Starting Game 1
+
+Starting Game 2
+
+Starting Game 3
+
+Starting Game 4
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/kayles.py", line 1272, in <module>
+    simulate_kayles_games(num_games, total_items)
+  File "/home/jihwan/NashIP/kayles.py", line 1263, in simulate_kayles_games
+    winner = play_kayles_game(total_pins, verbose=True)
+  File "/home/jihwan/NashIP/kayles.py", line 1191, in play_kayles_game
+    reasoning, move = get_move_dreamad(current_agent, current_agent, pins)
+  File "/home/jihwan/NashIP/kayles.py", line 1052, in get_move_dreamad
+    one_reasoning = one_parsed_content.get("reasoning")
+AttributeError: 'list' object has no attribute 'get'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1738122325.235519 2667278 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.
+
+Starting Game 1
+
+Starting Game 2
+
+Starting Game 3
+
+Starting Game 4
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/chomp_tworow.py", line 1007, in <module>
+    simulate_two_row_chomp_games(num_games=num_games, num_columns=8)
+  File "/home/jihwan/NashIP/chomp_tworow.py", line 998, in simulate_two_row_chomp_games
+    winner = play_two_row_chomp_game(num_columns, verbose=True)
+  File "/home/jihwan/NashIP/chomp_tworow.py", line 947, in play_two_row_chomp_game
+    reasoning, move = get_move_dreamad(current_agent, current_agent, grid)
+  File "/home/jihwan/NashIP/chomp_tworow.py", line 812, in get_move_dreamad
+    if is_valid_move_chomp(grid, row, col):
+  File "/home/jihwan/NashIP/chomp_tworow.py", line 980, in is_valid_move_chomp
+    0 <= row < len(grid) and
+TypeError: '<=' not supported between instances of 'int' and 'str'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1738181733.210316 3512802 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.
+
+Starting Game 1
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/chomp_square.py", line 910, in <module>
+    simulate_square_chomp_games(num_games=num_games, size=5)
+  File "/home/jihwan/NashIP/chomp_square.py", line 901, in simulate_square_chomp_games
+    winner = play_square_chomp_game(size, verbose=True)
+  File "/home/jihwan/NashIP/chomp_square.py", line 848, in play_square_chomp_game
+    reasoning, move = get_move_dreamad(current_agent, current_agent, grid)
+  File "/home/jihwan/NashIP/chomp_square.py", line 711, in get_move_dreamad
+    if is_valid_move_chomp(grid, row, col):
+  File "/home/jihwan/NashIP/chomp_square.py", line 882, in is_valid_move_chomp
+    return 0 <= row < size and 0 <= col < size and grid[row][col]
+TypeError: '<=' not supported between instances of 'int' and 'NoneType'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1738203879.327525 4189809 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.
+
+Starting Game 1
+
+Starting Game 2
+
+Starting Game 3
+
+Starting Game 4
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/chomp_square.py", line 923, in <module>
+    simulate_square_chomp_games(num_games=num_games, size=5)
+  File "/home/jihwan/NashIP/chomp_square.py", line 914, in simulate_square_chomp_games
+    winner = play_square_chomp_game(size, verbose=True)
+  File "/home/jihwan/NashIP/chomp_square.py", line 861, in play_square_chomp_game
+    reasoning, move = get_move_dreamad(current_agent, current_agent, grid)
+  File "/home/jihwan/NashIP/chomp_square.py", line 722, in get_move_dreamad
+    if is_valid_move_chomp(grid, row, col):
+  File "/home/jihwan/NashIP/chomp_square.py", line 895, in is_valid_move_chomp
+    return 0 <= row < size and 0 <= col < size and grid[row][col]
+TypeError: '<=' not supported between instances of 'int' and 'str'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1738204842.951174   22191 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.
+
+Starting Game 1
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 2 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+
+Starting Game 2
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+
+Starting Game 3
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 2
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 2
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 3 2
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 2 3
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 2 3
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 1 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 3 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+
+Starting Game 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 2 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 2 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 2 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 2 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 2 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+
+Starting Game 5
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 1
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 1
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 1 0
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 1
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 4 4
+
+Starting Game 6
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 0
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 1
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 1
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, True, True, True]] 4 2
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+
+Starting Game 7
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 0 3
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 4
+
+Starting Game 8
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+
+Starting Game 9
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 2
+check:!  [[False, False, False, True, True], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 2
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 2
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 2
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 2
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 2
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 0 0
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True], [False, False, False, False, True]] 4 4
+
+Starting Game 10
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 2
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 2
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 3 2
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 3 2
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, False], [False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 1 3
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 3 2
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [False, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, True, True], [False, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [False, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True]] 4 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True]] 4 4
+
+Starting Game 11
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 0
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 4
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, True, True, True, True], [False, True, True, True, True], [False, True, True, True, True]] 3 1
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 0 0
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 4 0
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, True, True, True], [False, False, True, True, True], [False, False, True, True, True], [False, True, True, True, True]] 4 4
+
+Starting Game 12
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 4
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 0
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 1
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 1
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 1
+check:!  [[False, True, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 1
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, True, True, True], [False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+Error decoding JSON for gemini model. Retrying...
+Error encountered. Retrying in 2 seconds...
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, True, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 3
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 2
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, True], [False, False, False, True, True], [False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True]] 2 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [True, True, True, True, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, True, True, True, True], [True, True, True, True, True]] 3 3
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 0
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 3 4
+check:!  [[False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, False], [False, False, False, False, True], [True, True, True, True, True]] 4 4
+
+Starting Game 13
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 0
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 0 2
+check:!  [[False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 1 1
+check:!  [[False, False, False, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True], [True, True, True, True, True]] 4 3
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/chomp_square.py", line 924, in <module>
+    simulate_square_chomp_games(num_games=num_games, size=5)
+  File "/home/jihwan/NashIP/chomp_square.py", line 915, in simulate_square_chomp_games
+    winner = play_square_chomp_game(size, verbose=True)
+  File "/home/jihwan/NashIP/chomp_square.py", line 861, in play_square_chomp_game
+    reasoning, move = get_move_dreamad(current_agent, current_agent, grid)
+  File "/home/jihwan/NashIP/chomp_square.py", line 722, in get_move_dreamad
+    if is_valid_move_chomp(grid, row, col):
+  File "/home/jihwan/NashIP/chomp_square.py", line 896, in is_valid_move_chomp
+    return 0 <= row < size and 0 <= col < size and grid[row][col]
+TypeError: '<=' not supported between instances of 'int' and 'str'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1738253223.886092  736401 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.

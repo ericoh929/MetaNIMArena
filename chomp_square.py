@@ -16,7 +16,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '4, 5'
 
 import os
 import google.generativeai as genai
-genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+gemini_api_keys = [
+    'AIzaSyB5lNkfPiDJMkwNrpAv3MHbnnFvkpuF7Ok',  # 첫 번째 API 키
+    'AIzaSyCYkix3fQio-WpUus7ziwNGhSk6qZp7LJs'   # 두 번째 API 키
+]
+selected_api_key = random.choice(gemini_api_keys)
+genai.configure(api_key=selected_api_key)
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),)
 
@@ -117,7 +122,7 @@ def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
 #         # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
 #         return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
 
-def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."):
+def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.", temperature=0.7):
     """
     Handles responses for different models based on the agent's configuration.
 
@@ -158,7 +163,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
 
             elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
                 generation_config = {
-                    "temperature": 0.7,
+                    "temperature": temperature,
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 8192,
@@ -183,7 +188,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                         {"role": "user", "content": prompt},
                     ],
                     model=agent["model"],
-                    temperature=0.7,
+                    temperature=temperature,
                 )
                 content = response.choices[0].message.content
                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
@@ -204,30 +209,64 @@ agents = [
     {"name": "Agent 2", "model": args.agent2_model, "prompting_method": args.agent2_prompt}
 ]
 
+def get_move(agent, grid):
+    remaining_grid = [
+        ''.join(['1' if cell else '0' for cell in row]) for row in grid
+    ]
+    prompt = f"""
+    # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+    # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+    # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+    # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+    # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+    # Task:\nBased on the current state of the grid, decide which position (row, col) you will select.",
+
+    # Output:
+    Provide the action in the following JSON format:
+
+    ```
+    {{
+        "row": integer,       // The row index of the position you select (0-based).
+        "col": integer        // The column index of the position you select (0-based).
+    }}
+    ```
+    """
+
+    retries = 0
+    while retries < max_retries:
+        parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Chomp player.")
+        reasoning = "None"
+        row = parsed_content.get("row")
+        col = parsed_content.get("col")
+
+        if is_valid_move_chomp(grid, row, col):
+            return reasoning, (row, col)
+
+        retries += 1
+
+    # Fallback: Randomly select a valid position
+    available_positions = [
+        (r, c) for r, row in enumerate(grid) for c, cell in enumerate(row) if cell
+    ]
+    if available_positions:
+        row, col = random.choice(available_positions)
+        reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
+        return reasoning, (row, col)
+
+    raise ValueError("No valid moves available, and fallback failed.")
+
 # Function for basic move (single-response without consistency or modeling)
 def get_basic_move(agent, grid):
     remaining_grid = [
         ''.join(['1' if cell else '0' for cell in row]) for row in grid
     ]
     prompt = f"""
-    # Game Role:
-    You are {agent['name']}, a participant in a game of Chomp.
-
-    # Objective:
-    Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-    # Game Rule:
-    1. The game is played on a square grid.
-    2. On your turn, you select a position (row, col).
-    3. All positions to the right and below the selected position are removed.
-    4. The player forced to select (0, 0) loses.
-
-    # Current State:
-    The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-    {remaining_grid}
-
-    # Task:
-    Based on the current state of the grid, decide which position (row, col) you will select.
+    # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+    # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+    # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+    # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+    # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+    # Task:\nBased on the current state of the grid, decide which position (row, col) you will select.",
 
     # Output:
     Provide your reasoning for the move and the action in the following JSON format:
@@ -343,24 +382,12 @@ def get_move_with_reflection(agent, grid):
         ''.join(['1' if cell else '0' for cell in row]) for row in grid
     ]
     prompt_initial = f"""
-    # Game Role:
-    You are {agent['name']}, a participant in a game of Chomp.
-
-    # Objective:
-    Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-    # Game Rule:
-    1. The game is played on a square grid.
-    2. On your turn, you select a position (row, col).
-    3. All positions to the right and below the selected position are removed.
-    4. The player forced to select (0, 0) loses.
-
-    # Current State:
-    The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-    {remaining_grid}
-
-    # Task:
-    Based on the current state of the grid, decide which position (row, col) you will select.
+    # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+    # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+    # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+    # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+    # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+    # Task:\nBased on the current state of the grid, decide which position (row, col) you will select.",
 
     # Output:
     Provide your reasoning for the move and the action in the following JSON format:
@@ -403,21 +430,12 @@ def get_move_with_reflection(agent, grid):
             ''.join(['1' if cell else '0' for cell in row]) for row in grid
         ]
         feedback_prompt = f"""
-        # Game Role:
-        You are {agent['name']}, a participant in a game of Chomp.
-
-        # Objective:
-        Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-        # Game Rule:
-        1. The game is played on a square grid.
-        2. On your turn, you select a position (row, col).
-        3. All positions to the right and below the selected position are removed.
-        4. The player forced to select (0, 0) loses.
-
-        # Current State:
-        The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-        {remaining_grid}
+        # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+        # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+        # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+        # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+        # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+        # Task:\nBased on the current state of the grid, decide which position (row, col) you will select."
 
         # First trial's reasoning and action:
         You initially chose position {initial_move} at first trial by the reason: '{initial_reasoning}'.
@@ -478,251 +496,6 @@ def get_move_with_reflection(agent, grid):
 
     return refined_reasoning, (row, col)
 
-def bias_removed(agent, grid):
-    remaining_grid = [
-        ''.join(['1' if cell else '0' for cell in row]) for row in grid
-    ]
-    first_prompt = f"""
-    # Game Role:
-    You are {agent['name']}, a participant in a game of Chomp.
-
-    # Objective:
-    Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-    # Game Rule:
-    1. The game is played on a square grid.
-    2. On your turn, you select a position (row, col).
-    3. All positions to the right and below the selected position are removed.
-    4. The player forced to select (0, 0) loses.
-
-    # Current State:
-    The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-    {remaining_grid}
-
-    # Task:
-    Based on the current state of the game, decide which position (row, col) you will select.
-
-    # Output:
-    Provide your reasoning for the move and the action in the following JSON format:
-
-    ```
-    {{
-        "reasoning": string,  // Explain why you chose this position.
-        "row": integer,       // The row index of the position you select (0-based).
-        "col": integer        // The column index of the position you select (0-based).
-    }}
-    ```
-    """
-
-    retries = 0
-    while retries < max_retries:
-        parsed_content = get_agent_response(agent, first_prompt, system_prompt="You are a skilled Chomp player.")
-        refined_reasoning = parsed_content.get("reasoning")
-        row = parsed_content.get("row")
-        col = parsed_content.get("col")
-
-        if is_valid_move_chomp(grid, row, col):
-            break
-
-        retries += 1
-
-    if retries == max_retries:
-        available_positions = [
-            (r, c) for r, row_data in enumerate(grid) for c, cell in enumerate(row_data) if cell
-        ]
-        if available_positions:
-            row, col = random.choice(available_positions)
-            refined_reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
-        else:
-            raise ValueError("No valid moves available for fallback.")
-
-    refined_action = (row, col)
-
-    prompt = f"""Given the following answer, predict the most likely provable question that led to this response.
-    # Answer:
-        "reasoning": "{refined_reasoning}",
-        "action": {refined_action}
-
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \`\`\`json" and "\`\`\`":
-
-    ```
-    {{
-        "provable question": string  // This is the most likely provable question that led to the above answer.
-    }}
-    ```
-    """
-
-    parsed_content = get_agent_response(agent, prompt, system_prompt="You are a rational smart assistant.")
-
-    question = parsed_content.get("provable question")
-
-    text = f"""Combine the following two instructions into a single instruction that captures their shared intention while harmonizing their nuances. Pay attention to clarity and ensure that any biases in the original instructions are mitigated.
-
-    - Original instruction (`{first_prompt}`): The first instruction to consider.
-    - Bias-mitigated instruction (`{question}`): The second instruction to harmonize.
-
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \`\`\`json" and "\`\`\`":
-
-    ```
-    {{
-        "instruction": string,  // This is the combined instruction harmonizing the two instructions.
-        "reasoning": string  // This is the reason why the new instruction is harmonized.
-    }}
-    ```
-    """
-
-    parsed_content = get_agent_response(agent, text, system_prompt="You are a rational smart assistant.")
-
-    new_instruction = parsed_content.get("instruction")
-
-    text = f"""{new_instruction}
-
-    # Output:
-    Provide your reasoning for the move and the action in the following JSON format:
-
-    ```
-    {{
-        "reasoning": string,  // Explain why you chose this position.
-        "row": integer,       // The row index of the position you select (0-based).
-        "col": integer        // The column index of the position you select (0-based).
-    }}
-    ```
-    """
-
-    retries = 0
-    while retries < max_retries:
-        parsed_content = get_agent_response(agent, text, system_prompt="You are a rational player.")
-        refined_reasoning = parsed_content.get("reasoning")
-        row = parsed_content.get("row")
-        col = parsed_content.get("col")
-
-        if is_valid_move_chomp(grid, row, col):
-            break
-
-        retries += 1
-
-    if retries == max_retries:
-        available_positions = [
-            (r, c) for r, row_data in enumerate(grid) for c, cell in enumerate(row_data) if cell
-        ]
-        if available_positions:
-            row, col = random.choice(available_positions)
-            refined_reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
-        else:
-            raise ValueError("No valid moves available for fallback.")
-
-    return refined_reasoning, (row, col)
-
-def bias_mitigated(agent, grid):
-    remaining_grid = [
-        ''.join(['1' if cell else '0' for cell in row]) for row in grid
-    ]
-    first_prompt = f"""
-    # Game Role:
-    You are {agent['name']}, a participant in a game of Chomp.
-
-    # Objective:
-    Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-    # Game Rule:
-    1. The game is played on a square grid.
-    2. On your turn, you select a position (row, col).
-    3. All positions to the right and below the selected position are removed.
-    4. The player forced to select (0, 0) loses.
-
-    # Current State:
-    The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-    {remaining_grid}
-
-    # Task:
-    Based on the current state of the game, decide which position (row, col) you will select.
-
-    # Output:
-    Provide your reasoning for the move and the action in the following JSON format:
-
-    ```
-    {{
-        "reasoning": string,  // Explain why you chose this position.
-        "row": integer,       // The row index of the position you select (0-based).
-        "col": integer        // The column index of the position you select (0-based).
-    }}
-    ```
-    """
-
-    prompt = f"""Given the following instruction, rewrite it to minimize bias stemming from strong prior knowledge while preserving its original intent and clarity.
-    # Instruction:
-    {first_prompt}
-
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \`\`\`json" and "\`\`\`":
-
-    ```
-    {{
-        "instruction": string  // This is a rewritten instruction to minimize the bias.
-    }}
-    ```
-    """
-
-    parsed_content = get_agent_response(agent, prompt, system_prompt="You are a rational smart assistant.")
-
-    question = parsed_content.get("instruction")
-
-    text = f"""Combine the following two instructions into a single instruction that captures their shared intention while harmonizing their nuances. Pay attention to clarity and ensure that any biases in the original instructions are mitigated.
-
-    - Original instruction (`{first_prompt}`): The first instruction to consider.
-    - Bias-mitigated instruction (`{question}`): The second instruction to harmonize.
-
-    The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \`\`\`json" and "\`\`\`":
-
-    ```
-    {{
-        "instruction": string,  // This is the combined instruction harmonizing the two instructions.
-        "reasoning": string  // This is the reason why the new instruction is harmonized.
-    }}
-    ```
-    """
-
-    parsed_content = get_agent_response(agent, text, system_prompt="You are a rational smart assistant.")
-
-    new_instruction = parsed_content.get("instruction")
-
-    new_instruction = f"""{new_instruction}
-
-    # Output:
-    Provide your reasoning for the move and the action in the following JSON format:
-
-    ```
-    {{
-        "reasoning": string,  // Explain why you chose this position.
-        "row": integer,       // The row index of the position you select (0-based).
-        "col": integer        // The column index of the position you select (0-based).
-    }}
-    ```
-    """
-
-    retries = 0
-    while retries < max_retries:
-        parsed_content = get_agent_response(agent, new_instruction, system_prompt="You are a rational game player.")
-        refined_reasoning = parsed_content.get("reasoning")
-        row = parsed_content.get("row")
-        col = parsed_content.get("col")
-
-        if is_valid_move_chomp(grid, row, col):
-            break
-
-        retries += 1
-
-    if retries == max_retries:
-        available_positions = [
-            (r, c) for r, row_data in enumerate(grid) for c, cell in enumerate(row_data) if cell
-        ]
-        if available_positions:
-            row, col = random.choice(available_positions)
-            refined_reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
-        else:
-            raise ValueError("No valid moves available for fallback.")
-
-    return refined_reasoning, (row, col)
-
 def get_move_with_debate(agent1, agent2, grid):
     initial_moves = {}
     initial_reasonings = {}
@@ -732,24 +505,12 @@ def get_move_with_debate(agent1, agent2, grid):
             ''.join(['1' if cell else '0' for cell in row]) for row in grid
         ]
         prompt = f"""
-        # Game Role:
-        You are {agent['name']}, a participant in a game of Chomp.
-
-        # Objective:
-        Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-        # Game Rule:
-        1. The game is played on a square grid.
-        2. On your turn, you select a position (row, col).
-        3. All positions to the right and below the selected position are removed.
-        4. The player forced to select (0, 0) loses.
-
-        # Current State:
-        The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-        {remaining_grid}
-
-        # Task:
-        Based on the current state of the game, decide which position (row, col) you will select.
+        # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+        # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+        # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+        # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+        # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+        # Task:\nBased on the current state of the grid, decide which position (row, col) you will select.",
 
         # Output:
         Provide your reasoning for the move and the action in the following JSON format:
@@ -801,24 +562,12 @@ def get_move_with_debate(agent1, agent2, grid):
             ]
             if i == 0:
                 prompt = f"""
-                # Game Role:
-                You are {agent['name']}, a participant in a game of Chomp.
-
-                # Objective:
-                Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-                # Game Rule:
-                1. The game is played on a square grid.
-                2. On your turn, you select a position (row, col).
-                3. All positions to the right and below the selected position are removed.
-                4. The player forced to select (0, 0) loses.
-
-                # Current State:
-                The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-                {remaining_grid}
-
-                # Task:
-                Based on the current state of the game, decide which position (row, col) you will select.
+                # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+                # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+                # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+                # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+                # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+                # Task:\nBased on the current state of the grid, decide which position (row, col) you will select.",
 
                 You initially chose position {initial_moves['agent1']} at first trial by the reason: '{initial_reasonings['agent1']}'.
                 Other agent argues that you should choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.
@@ -837,24 +586,12 @@ def get_move_with_debate(agent1, agent2, grid):
                 """
             if i == 1:
                 prompt = f"""
-                # Game Role:
-                You are {agent['name']}, a participant in a game of Chomp.
-
-                # Objective:
-                Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-                # Game Rule:
-                1. The game is played on a square grid.
-                2. On your turn, you select a position (row, col).
-                3. All positions to the right and below the selected position are removed.
-                4. The player forced to select (0, 0) loses.
-
-                # Current State:
-                The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-                {remaining_grid}
-
-                # Task:
-                Based on the current state of the game, decide which position (row, col) you will select.
+                # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+                # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+                # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+                # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+                # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+                # Task:\nBased on the current state of the grid, decide which position (row, col) you will select.",
 
                 You initially chose position {initial_moves['agent2']} at first trial by the reason: '{initial_reasonings['agent2']}'.
                 Other agent argues that you should choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.
@@ -908,194 +645,211 @@ def get_move_with_debate(agent1, agent2, grid):
 
     return refined_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
 
-def get_move_with_bias_mitigate_debate(agent1, agent2, grid):
+def get_move_dreamad(agent1, agent2, grid):
     initial_moves = {}
     initial_reasonings = {}
     i = 0
-    for agent in [agent1, agent2]:
+    for agent in [agent1]:
         remaining_grid = [
             ''.join(['1' if cell else '0' for cell in row]) for row in grid
         ]
-        if i == 0:
-            prompt = f"""
-            # Game Role:
-            You are {agent['name']}, a participant in a game of Chomp.
+        prompt = f"""
+        # Game Role:\nYou are {agent['name']}, a participant in a game of NxN square Chomp.\n
+        # Objective:\nYour goal is to force your opponent to take the top-right corner of the grid (position (N-1, N-1)).\n
+        # Game Rule:\n1. The game is played on a square grid.\n2. On your turn, you select a position (row, col).\n3. All positions to the left and below the selected position are removed.\n4. The player forced to select (N-1, N-1) loses.\n
+        # Coordinate System:\n- The grid follows a **zero-based coordinate system**.\n- The **bottom-left corner** is (0, 0).\n
+        # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+        # Task:\nBased on the current state of the grid, decide which position (row, col) you will select."
+        """
+        #################prompt1#################
+        game_prompt = f"""
+        Below is a game description. Extract key information.
 
-            # Objective:
-            Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
+        **Game Description:**
+        {prompt}
 
-            # Game Rule:
-            1. The game is played on a square grid.
-            2. On your turn, you select a position (row, col).
-            3. All positions to the right and below the selected position are removed.
-            4. The player forced to select (0, 0) loses.
+        # Output:
+        Provide your answer in the following JSON format:
+        ```
+        {{
+        "game_definition": "string", // What is the definition of this game?.
+        "winning_condition": "string", // How to win the game.
+        "move_constraints": "string" // What actions are allowed per turn.
+        }}
+        ```
+        """
+    
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
 
-            # Current State:
-            The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-            {remaining_grid}
+        game_definition = parsed_content.get("game_definition")
+        winning_condition = parsed_content.get("winning_condition")
+        move_constraints = parsed_content.get("move_constraints")
 
-            # Task:
-            Based on the current state of the game, decide which position (row, col) you will select.
 
-            # Output:
-            Provide your reasoning for the move and the action in the following JSON format:
+        strategy_prompt = f"""
+        Based on the game information below, derive the **optimal strategy**.
 
-            ```
-            {{
-                "reasoning": string,  // Explain why you chose this position.
-                "row": integer,       // The row index of the position you select (0-based).
-                "col": integer        // The column index of the position you select (0-based).
-            }}
-            ```
-            """
+        **Game:** {game_definition}  
+        **Winning Condition:** {winning_condition}  
+        **Move Constraints:** {move_constraints}
 
-            retries = 0
-            while retries < max_retries:
-                parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Chomp player and debating the best action.")
-                initial_reasoning = parsed_content.get("reasoning")
-                row = parsed_content.get("row")
-                col = parsed_content.get("col")
+        # Output:
+        Provide your answer in the following JSON format:
+        ```
+        {{
+        "state_evaluation": "string", // How to assess the game state.
+        "winning_strategy": "string", // Winning strategy in this turn to win this game.
+        "endgame_tactics": "string" // Best strategy in a near-win situation.
+        }}
+        ```
+        """
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
 
-                if is_valid_move_chomp(grid, row, col):
-                    break
+        state_evaluation = parsed_content.get("state_evaluation")
+        winning_strategy = parsed_content.get("winning_strategy")
+        endgame_tactics = parsed_content.get("endgame_tactics")
 
-                retries += 1
 
-            if retries == max_retries:
-                available_positions = [
-                    (r, c) for r, row_data in enumerate(grid) for c, cell in enumerate(row_data) if cell
-                ]
-                if available_positions:
-                    row, col = random.choice(available_positions)
-                    initial_reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
-                else:
-                    raise ValueError("No valid moves available for fallback.")
+    for agent in [agent1, agent2]:
 
-        if i == 1:
-            text = f"""Given the following instruction, rewrite it to minimize bias stemming from strong prior knowledge while preserving its original intent and clarity.
-            # Instruction:
-            {prompt}
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
 
-            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \`\`\`json" and "\`\`\`":
+        **Game:** {game_definition}  
+        **Winning Condition:** {winning_condition}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
 
-            ```
-            {{
-                "instruction": string  // This is a rewritten instruction to minimize the bias.
-            }}
-            ```
-            """
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
 
-            parsed_content = get_agent_response(agent, text, system_prompt="You are a rational smart assistant.")
-            new_instruction = parsed_content.get("instruction")
+        # Output:
+        Provide your answer in the following JSON format:
+        ```
+        {{
+        "optimized_prompt": "string", // The refined prompt that clearly directs decision-making.
+        }}
+        ``` 
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
 
-            text = f"""{new_instruction}
+        optimized_prompt = parsed_content.get("optimized_prompt")
+        # Current State:
+        # The grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+        # - Winning Strategy: {winning_strategy}\n
+        # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
+        one_new_prompt = f"""{optimized_prompt}\n
+        
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
 
-            # Output:
-            Provide your reasoning for the move and the action in the following JSON format:
+        # Output:
+        Provide your reasoning for the move and the action in the following JSON format:
+        ```
+        {{
+            "reasoning": string,  // Explain why you chose this position (0-based position). 
+            "row": integer,       // The row index of the position you select (0-based).
+            "col": integer,        // The column index of the position you select (0-based).
+        }}
+        ```
+        """
 
-            ```
-            {{
-                "reasoning": string,  // Explain why you chose this position.
-                "row": integer,       // The row index of the position you select (0-based).
-                "col": integer        // The column index of the position you select (0-based).
-            }}
-            ```
-            """
+        retries = 0
+        while retries < max_retries:
+            parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a skilled Chomp player and debating the best action.")
+            refined_reasoning = parsed_content.get("reasoning")
+            row = parsed_content.get("row")
+            col = parsed_content.get("col")
 
-            retries = 0
-            while retries < max_retries:
-                parsed_content = get_agent_response(agent, text, system_prompt="You are a rational game player.")
-                initial_reasoning = parsed_content.get("reasoning")
-                row = parsed_content.get("row")
-                col = parsed_content.get("col")
+            if is_valid_move_chomp(grid, row, col):
+                break
 
-                if is_valid_move_chomp(grid, row, col):
-                    break
+            retries += 1
 
-                retries += 1
-
-            if retries == max_retries:
-                available_positions = [
-                    (r, c) for r, row_data in enumerate(grid) for c, cell in enumerate(row_data) if cell
-                ]
-                if available_positions:
-                    row, col = random.choice(available_positions)
-                    initial_reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
-                else:
-                    raise ValueError("No valid moves available for fallback.")
-
+        if retries == max_retries:
+            available_positions = [
+                (r, c) for r, row_data in enumerate(grid) for c, cell in enumerate(row_data) if cell
+            ]
+            if available_positions:
+                row, col = random.choice(available_positions)
+                refined_reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
+            else:
+                raise ValueError("No valid moves available for fallback.")
+            
         if i == 0:
             initial_moves['agent1'] = (row, col)
-            initial_reasonings['agent1'] = initial_reasoning
+            initial_reasonings['agent1'] = refined_reasoning
+            one_prompt = optimized_prompt
         if i == 1:
             initial_moves['agent2'] = (row, col)
-            initial_reasonings['agent2'] = initial_reasoning
+            initial_reasonings['agent2'] = refined_reasoning
+            two_prompt = optimized_prompt
         i += 1
 
     for _ in range(debate_rounds):
         i = 0
         for agent in [agent1, agent2]:
-            remaining_grid = [
-                ''.join(['1' if cell else '0' for cell in row]) for row in grid
-            ]
+            
             if i == 0:
+                # - Winning Strategy: {winning_strategy}\n
+                # Current State:\nThe grid is represented as a list of lists, where '1' means the position is still available, and '0' means it is removed:\n{remaining_grid}\n
                 prompt = f"""
-                # Game Role:
-                You are {agent['name']}, a participant in a game of Chomp.
+                {one_prompt}\n 
+                
+                You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
 
-                # Objective:
-                Your goal is to force your opponent to take the top-left corner of the grid (position (0, 0)).
-
-                # Game Rule:
-                1. The game is played on a square grid.
-                2. On your turn, you select a position (row, col).
-                3. All positions to the right and below the selected position are removed.
-                4. The player forced to select (0, 0) loses.
-
-                # Current State:
-                The grid is represented as binary strings, where '1' means the position is still available, and '0' means it is removed:
-                {remaining_grid}
-
-                # Task:
-                Based on the current state of the game, decide which position (row, col) you will select.
-
-                You initially chose position {initial_moves['agent1']} at first trial by the reason: '{initial_reasonings['agent1']}'.
-                Other agent argues that you should choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.
-                Considering the other's opinion, refine or confirm your move.
+                ### Instructions:
+                1. **If a winning move exists, take it immediately.**  
+                2. **Otherwise, follow optimal move principles.**  
+                3. Justify your move using the extracted strategy.
 
                 # Output:
                 Provide your reasoning for the move and the action in the following JSON format:
-
                 ```
                 {{
-                    "reasoning": string,  // Explain why you chose this position.
+                    "reasoning": string,  // Explain why you chose this position (0-based position). 
                     "row": integer,       // The row index of the position you select (0-based).
-                    "col": integer        // The column index of the position you select (0-based).
+                    "col": integer,        // The column index of the position you select (0-based).
                 }}
                 ```
                 """
             if i == 1:
-                prompt = f"""{new_instruction}
+                prompt = f"""
+                {two_prompt}\n
 
-                You initially chose position {initial_moves['agent2']} at first trial by the reason: '{initial_reasonings['agent2']}'.
-                Other agent argues that you should choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.
-                Considering the other's opinion, refine or confirm your move.
+                You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Instructions:
+                1. **If a winning move exists, take it immediately.**  
+                2. **Otherwise, follow optimal move principles.**  
+                3. Justify your move using the extracted strategy.
 
                 # Output:
                 Provide your reasoning for the move and the action in the following JSON format:
-
                 ```
                 {{
-                    "reasoning": string,  // Explain why you chose this position.
+                    "reasoning": string,  // Explain why you chose this position (0-based position). 
                     "row": integer,       // The row index of the position you select (0-based).
-                    "col": integer        // The column index of the position you select (0-based).
+                    "col": integer,        // The column index of the position you select (0-based).
                 }}
                 ```
                 """
-
             retries = 0
             while retries < max_retries:
-                parsed_content = get_agent_response(agent, prompt, system_prompt="You are a rational game player and debating the best action.")
+                parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Chomp player and debating the best action.")
                 refined_reasoning = parsed_content.get("reasoning")
                 row = parsed_content.get("row")
                 col = parsed_content.get("col")
@@ -1116,23 +870,28 @@ def get_move_with_bias_mitigate_debate(agent1, agent2, grid):
                     raise ValueError("No valid moves available for fallback.")
 
             if i == 0:
-                initial_moves['agent1'] = (row, col)
-                initial_reasonings['agent1'] = refined_reasoning
+                a0_action = (row, col)
+                a0_reasoning = refined_reasoning
+                
             if i == 1:
-                initial_moves['agent2'] = (row, col)
-                initial_reasonings['agent2'] = refined_reasoning
-
+                a1_action = (row, col)
+                a1_reasoning = refined_reasoning
+        
             i += 1
 
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
+            
         if len(set(initial_moves.values())) == 1:
             return refined_reasoning, initial_moves['agent1']
 
     return refined_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
 
 
-
 def play_square_chomp_game(size=5, verbose=False):
-    with open(f'/home/jihwan/NashIP/result/Chomp_S/{args.agent1_model}_{args.agent1_prompt}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
+    with open(f'/home/jihwan/NashIP/result/Chomp_S/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
         # Initialize the square grid
         grid = [[True for _ in range(size)] for _ in range(size)]
         turn = 0
@@ -1145,20 +904,14 @@ def play_square_chomp_game(size=5, verbose=False):
                 reasoning, move = get_consistent_move(current_agent, grid)
             elif current_agent["prompting_method"] == "basic":
                 reasoning, move = get_basic_move(current_agent, grid)
+            elif current_agent["prompting_method"] == "simple":
+                reasoning, move = get_move(current_agent, grid)
             elif current_agent["prompting_method"] == "self_reflection":
                 reasoning, move = get_move_with_reflection(current_agent, grid)
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, grid)
-            elif current_agent["prompting_method"] == "bias_removed":
-                reasoning, move = bias_removed(current_agent, grid)
-            elif current_agent["prompting_method"] == "bias_mitigated":
-                reasoning, move = bias_mitigated(current_agent, grid)
-            elif current_agent["prompting_method"] == "basic":
-                reasoning, move = get_basic_move(current_agent, grid)
-            elif current_agent["prompting_method"] == "bias_mitigate_debate":
-                reasoning, move = get_move_with_bias_mitigate_debate(current_agent, current_agent, grid)
-            elif current_agent["prompting_method"] == "original_vs_harmonized_debate":
-                reasoning, move = get_move_with_original_vs_harmonized_debate(current_agent, current_agent, grid)
+            elif current_agent["prompting_method"] == "dreamad":
+                reasoning, move = get_move_dreamad(current_agent, current_agent, grid)
             else:
                 print("Error: set the prompting methods", file=f)
                 return None
@@ -1170,7 +923,12 @@ def play_square_chomp_game(size=5, verbose=False):
                 print(f"Invalid move by {current_agent['name']}.", file=f)
                 return other_agent["name"]
 
-            # Apply the move
+            # Check if the player selected the losing position (N-1, N-1)
+            if row == size - 1 and col == size - 1:
+                print(f"{current_agent['name']} ate the poisoned square ({row}, {col})! {other_agent['name']} wins!", file=f)
+                return other_agent["name"]
+
+            # Apply the move (remove all squares to the left and below)
             apply_move_chomp(grid, row, col)
 
             if verbose:
@@ -1186,19 +944,24 @@ def play_square_chomp_game(size=5, verbose=False):
 
 
 def is_valid_move_chomp(grid, row, col):
+    print('check:! ', grid, row, col)
     size = len(grid)
     return 0 <= row < size and 0 <= col < size and grid[row][col]
 
 
 def apply_move_chomp(grid, row, col):
-    for r in range(row, len(grid)):
-        for c in range(col, len(grid[0])):
+    """
+    선택한 (row, col) 칸을 포함하여,
+    해당 칸보다 **왼쪽 및 아래** 부분을 없앰.
+    """
+    for r in range(row, -1, -1):  # 아래 방향 (row 이하 전부 제거)
+        for c in range(col, -1, -1):  # 왼쪽 방향 (col 이하 전부 제거)
             grid[r][c] = False
 
 
 def simulate_square_chomp_games(num_games, size=8):
     win_counts = {agent["name"]: 0 for agent in agents}
-    with open(f'/home/jihwan/NashIP/result/Chomp_S/{args.agent1_model}_{args.agent1_prompt}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
+    with open(f'/home/jihwan/NashIP/result/Chomp_S/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
         for game_num in range(num_games):
             print(f"\nStarting Game {game_num + 1}", file=f)
             print(f"\nStarting Game {game_num + 1}")
@@ -1212,194 +975,3 @@ def simulate_square_chomp_games(num_games, size=8):
             print(f"{agent['name']} Win Rate: {win_rate:.2f}% ({win_counts[agent['name']]} wins out of {num_games})", file=f)
 
 simulate_square_chomp_games(num_games=num_games, size=5)
-
-
-
-# def self_play_debate(agent1, agent2, remaining_items, n_step_lookahead):
-#     initial_remaining_items = remaining_items
-#     moves = []  # Track each agent's moves for each lookahead step
-#     planning = ''
-#     for step in range(1, n_step_lookahead + 1):
-#         # Agent 1's move
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent1 = f"""
-#         #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-
-#         parsed_content = get_agent_response(agent1, prompt_agent1, system_prompt="You are a skilled Nim player.")
-#         agent1_reasoning = parsed_content.get("reasoning")
-#         agent1_action = parsed_content.get("action")
-
-#         agent1_move = int(agent1_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'My reasoning: {agent1_reasoning}\n'
-#         planning += f'My action: {agent1_action}\n'
-        
-#         remaining_items -= agent1_move
-#         planning += f'Remaining total items by your action: {remaining_items}\n\n'
-#         moves.append((agent1["name"], agent1_move, remaining_items))
-
-#         # Check if game ends with Agent 1's move
-#         if remaining_items <= 0 and step == 0:
-#             return agent1_reasoning, agent1_move  # Agent 1 wins if no items remain
-#         if remaining_items <= 0:
-#             break
-
-#         # Agent 2's simulated response
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent2 = f"""
-#         #Game Role:\n You are {agent2['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-#         parsed_content = get_agent_response(agent2, prompt_agent2, system_prompt="You are a skilled Nim player.")
-#         agent2_reasoning = parsed_content.get("reasoning")
-#         agent2_action = parsed_content.get("action")
-
-#         agent2_move = int(agent2_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'Opponent reasoning: {agent2_reasoning}\n'
-#         planning += f'Opponent action: {agent2_action}\n'
-#         remaining_items -= agent2_move
-
-#         planning += f'Remaining total items by opponent\'s action: {remaining_items}\n\n'
-#         moves.append((agent2["name"], agent2_move, remaining_items))
-        
-
-#         # Check if game ends with Agent 2's move
-#         if remaining_items <= 0:
-#             break
-#             # return agent1_reasoning, agent1_move  # Agent 1's initial move if Agent 2 would win
-
-#     # Final decision for Agent 1 based on the full n-step lookahead sequence
-#     move_sequence_str = "; ".join([f"{name} took {move} items and {remains} items remained" for name, move, remains in moves]) #Decide how many items to take between 1 and {max_take} at this current step to win by taking all remaining items on your turn, leaving no items for your opponent. Provide your reasoning and action in the following schema:
-#     final_prompt_agent1 = f"""
-#     #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#     #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#     #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#     #Current State:\n There are {initial_remaining_items} items remaining in the pile.\n\n
-#     #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#     As part of your strategy, you conducted a simulated planning process. This planning predicted possible moves by the opponent and future scenarios based on the current state of the game.
-#     The planning results are provided below as a reference:\n
-#     #Simulated Planning History:\n{planning}\nSimultion ends.\n\n
-
-#     Now, carefully review the simulated planning history and reflect and decide how many items you will take (between 1 and 3) on this turn.\n
-
-#     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning Only provide integer between 1 and 3.\n}}
-#     """
-#     parsed_content = get_agent_response(agent1, final_prompt_agent1, system_prompt="You are a skilled Nim player.")
-#     agent1_reasoning = parsed_content.get("reasoning")
-#     agent1_action = parsed_content.get("action")
-
-#     agent1_final_move = int(agent1_action)
-    
-#     return agent1_reasoning, agent1_final_move
-
-# def self_play_debate_exp(agent1, agent2, remaining_items, n_step_lookahead):
-#     initial_remaining_items = remaining_items
-#     moves = []  # Track each agent's moves for each lookahead step
-#     planning = ''
-#     for step in range(1, n_step_lookahead + 1):
-#         # Agent 1's move
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent1 = f"""
-#         #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-
-#         parsed_content = get_agent_response(agent1, prompt_agent1, system_prompt="You are a skilled Nim player.")
-
-#         agent1_reasoning = parsed_content.get("reasoning")
-#         agent1_action = parsed_content.get("action")
-#         agent1_move = int(agent1_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'My reasoning: {agent1_reasoning}\n'
-#         planning += f'My action: {agent1_action}\n'
-        
-#         remaining_items -= agent1_move
-#         planning += f'Remaining total items by your action: {remaining_items}\n\n'
-#         moves.append((agent1["name"], agent1_move, remaining_items))
-
-#         # Check if game ends with Agent 1's move
-#         if step == 0 and remaining_items <= 0:
-#             return agent1_reasoning, agent1_move  # Agent 1 wins if no items remain
-        
-#         if remaining_items <= 0:
-#             break
-
-#         # Agent 2's simulated response
-#         state = f"""There are {remaining_items} items remaining in the pile."""
-#         prompt_agent2 = f"""
-#         #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#         #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#         #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#         #Current State:\n {state}\n\n
-#         #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#         The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#         """
-        
-#         agent2_reasoning, agent2_action = get_move_with_debate(agent1, agent1, remaining_items)
-
-#         agent2_move = int(agent2_action)
-
-#         planning += f'State: {state}\n'
-#         planning += f'Opponent reasoning: {agent2_reasoning}\n'
-#         planning += f'Opponent action: {agent2_action}\n'
-
-#         remaining_items -= agent2_move
-#         planning += f'Remaining total items by opponent\'s action: {remaining_items}\n\n'
-#         moves.append((agent2["name"], agent2_move, remaining_items))
-        
-
-#         # Check if game ends with Agent 2's move
-#         if remaining_items <= 0:
-#             break
-#             # return agent1_reasoning, agent1_move  # Agent 1's initial move if Agent 2 would win
-
-#     # Final decision for Agent 1 based on the full n-step lookahead sequence
-#     move_sequence_str = "; ".join([f"{name} took {move} items and {remains} items remained" for name, move, remains in moves]) #\nIn short, Predicted Move Sequence (after {n_step_lookahead} steps):\n{move_sequence_str}
-#     final_prompt_agent1 = f"""
-#     #Game Role:\n You are {agent1['name']}, a participant in a game of Nim variants.\n\n
-#     #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
-#     #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
-#     #Current State:\n There are {initial_remaining_items} items remaining in the pile.\n\n
-#     #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
-
-#     As part of your strategy, you conducted a simulated planning process. This planning predicted possible moves by the opponent and future scenarios based on the current state of the game.
-#     The planning results are provided below as a reference:
-
-#     Simulated Planning History:\n{planning}\nSimultion ends.\n\n
-
-#     Now, carefully review the simulated planning history and reflect and decide how many items you will take (between 1 and 3) on this turn.\n
-    
-#     The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and 3.\n}}
-#     """
-
-#     parsed_content = get_agent_response(agent1, final_prompt_agent1, system_prompt="You are a skilled Nim player.")
-
-#     agent1_reasoning = parsed_content.get("reasoning")
-#     agent1_action = parsed_content.get("action")
-
-#     agent1_final_move = int(agent1_action)
-    
-#     return agent1_reasoning, agent1_final_move

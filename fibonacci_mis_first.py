@@ -16,7 +16,12 @@ os.environ['CUDA_VISIBLE_DEVICES'] = '4, 5'
 
 import os
 import google.generativeai as genai
-genai.configure(api_key=os.environ['GEMINI_API_KEY'])
+gemini_api_keys = [
+    'AIzaSyB5lNkfPiDJMkwNrpAv3MHbnnFvkpuF7Ok',  # 첫 번째 API 키
+    'AIzaSyCYkix3fQio-WpUus7ziwNGhSk6qZp7LJs'   # 두 번째 API 키
+]
+selected_api_key = random.choice(gemini_api_keys)
+genai.configure(api_key=selected_api_key)
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),)
 
@@ -117,7 +122,7 @@ def convert_to_llama_format(system, instruction): #for instruct-fine-tuned model
 #         # inputs = tokenizer.encode(prompt, add_special_tokens=False, return_tensors="pt").to("cuda")
 #         return(tokenizer.batch_decode(outputs[0], skip_special_tokens=True))
 
-def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player."):
+def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim player.", temperature=0.7):
     """
     Handles responses for different models based on the agent's configuration.
 
@@ -158,7 +163,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
 
             elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
                 generation_config = {
-                    "temperature": 0.7,
+                    "temperature": temperature,
                     "top_p": 0.95,
                     "top_k": 40,
                     "max_output_tokens": 8192,
@@ -183,7 +188,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                         {"role": "user", "content": prompt},
                     ],
                     model=agent["model"],
-                    temperature=0.7,
+                    temperature=temperature,
                 )
                 content = response.choices[0].message.content
                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
@@ -204,6 +209,48 @@ agents = [
 ]
 
 # Function for basic move (single-response without consistency or modeling)
+
+def get_move(agent, remaining_items, max_take, last_taken):
+    if last_taken is None:
+        prompt = f"""
+#Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+#Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
+#Game Rule:\n 1. There is a single pile of stones.\n
+2. Players take turns to take stones.\n
+3. The first player can take any number of stones, but not all the stones in the first move.\n
+4. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+5. The player who takes the last stone loses the game.\n\n
+#Current State:\n There are {remaining_items} stones remaining in the pile.\n
+You can take between 1 and {max_take-1} stones on your turn, where {max_take-1} = min(2 × {last_taken}, {remaining_items-1}).\n\n
+
+#Task:\nYou are the first player. Based on the current state of the game, decide how many items you will take (between 1 and {remaining_items-1}) on this turn.\n\n
+
+The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take-1}.\n}}
+    """
+    else:
+        prompt = f"""
+#Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+#Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
+#Game Rule:\n 1. There is a single pile of stones.\n
+2. Players take turns to take stones.\n
+3. The first player can take any number of stones, but not all the stones in the first move.\n
+4. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+5. The player who takes the last stone loses the game.\n\n
+#Current State:\n There are {remaining_items} stones remaining in the pile.\n
+The last player took {last_taken} stones.\n
+You can take between 1 and {max_take} stones on your turn, where {max_take} = min(2 × {last_taken}, {remaining_items}).\n\n
+
+#Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
+
+The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.\n}}
+"""
+        
+    parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Fibonacci player.")
+
+    action = parsed_content.get("action")
+
+    return "None", action
+    
 def get_basic_move(agent, remaining_items, max_take, last_taken):
     if last_taken is None:
         prompt = f"""
@@ -1157,6 +1204,566 @@ The output should be a markdown code snippet formatted in the following schema, 
 
     return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
 
+def get_move_dreamad(agent1, agent2, remaining_items, max_take, last_taken):
+    initial_moves = {}
+    initial_reasonings = {}
+    i = 0
+    for agent in [agent1]:
+        prompt = f"""
+        #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+        #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
+        #Game Rule:\n 1. There is a single pile of stones.\n
+        2. Players take turns to take stones.\n
+        3. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+        4. The player who takes the last stone loses the game.\n\n
+        #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+        The last player took {last_taken} stones.\n
+        You can take between 1 and {max_take} stones on your turn, where {max_take} = min(2 × {last_taken}, {remaining_items}).\n\n
+
+        #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
+        """
+        #################prompt1#################
+        game_prompt = f"""
+        Below is a game description. Extract key information.
+
+        **Game Description:**
+        {prompt}
+
+        ### Format Response as:
+        {{
+        "game_definition": "string", // What is the definition of this game?.
+        "winning_condition": "string", // How to win the game.
+        "move_constraints": "string" // What actions are allowed per turn.
+        }}
+        """
+    
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+        game_definition = parsed_content.get("game_definition")
+        winning_condition = parsed_content.get("winning_condition")
+        move_constraints = parsed_content.get("move_constraints")
+
+
+        strategy_prompt = f"""
+        Based on the game information below, derive the **optimal strategy**.
+
+        **Game:** {game_definition}  
+        **Winning Condition:** {winning_condition}  
+        **Move Constraints:** {move_constraints}
+
+        ### Format Response as:
+        {{
+        "state_evaluation": "string", // How to assess the game state.
+        "winning_strategy": "string", // Winning strategy in this turn to win this game.
+        "endgame_tactics": "string" // Best strategy in a near-win situation.}}
+        """
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+
+        state_evaluation = parsed_content.get("state_evaluation")
+        winning_strategy = parsed_content.get("winning_strategy")
+        endgame_tactics = parsed_content.get("endgame_tactics")
+
+
+    for agent in [agent1, agent2]:
+
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
+
+        **Game:** {game_definition}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
+
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
+
+        ### Format Response as:
+
+        {{
+        "optimized_prompt": "string", // The refined prompt that clearly directs decision-making. }}
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
+
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        one_new_prompt = f"""{optimized_prompt}\n
+
+        **Current State:**  
+        - There are {remaining_items} items left.  
+    
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
+
+        ### Format Response as:
+        {{
+        "reasoning": "string", // Explanation of the move based on the strategy.
+        "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.}}
+        """
+        one_parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a game theorist and strategist.")
+        one_reasoning = one_parsed_content.get("reasoning")
+        one_action = one_parsed_content.get("action")
+
+        if i == 0:
+            initial_moves['agent1'] = one_action
+            initial_reasonings['agent1'] = one_reasoning
+            one_prompt = optimized_prompt
+        if i == 1:
+            initial_moves['agent2'] = one_action
+            initial_reasonings['agent2'] = one_reasoning
+            two_prompt = optimized_prompt
+
+        i += 1
+
+
+    for _ in range(debate_rounds):
+        i = 0
+        for agent in [agent1, agent2]:
+            
+            if i == 0:
+                prompt = f"""
+                {one_prompt}\n
+
+                You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Format Response as:
+                {{
+                "reasoning": "string", // Explanation of the move based on the strategy.
+                "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.
+                }}
+                """
+            if i == 1:
+                prompt = f"""
+                {two_prompt}\n
+
+                You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Format Response as:
+                {{
+                "reasoning": "string", // Explanation of the move based on the strategy.
+                "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.
+                }}
+                """
+
+            parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Game player and debating the best move.")
+
+            initial_reasoning = parsed_content.get("reasoning")
+            initial_action = parsed_content.get("action")
+            if i == 0:
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
+            if i == 1:
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
+            i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
+            
+        if len(set(initial_moves.values())) == 1:
+            return initial_reasoning, initial_action
+
+    return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+
+def get_move_dreamad_three(agent1, agent2, agent3, remaining_items, max_take, last_taken):
+    initial_moves = {}
+    initial_reasonings = {}
+    i = 0
+    for agent in [agent1]:
+        prompt = f"""
+        #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+        #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
+        #Game Rule:\n 1. There is a single pile of stones.\n
+        2. Players take turns to take stones.\n
+        3. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+        4. The player who takes the last stone loses the game.\n\n
+        #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+        The last player took {last_taken} stones.\n
+        You can take between 1 and {max_take} stones on your turn, where {max_take} = min(2 × {last_taken}, {remaining_items}).\n\n
+
+        #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
+        """
+        #################prompt1#################
+        game_prompt = f"""
+        Below is a game description. Extract key information.
+
+        **Game Description:**
+        {prompt}
+
+        ### Format Response as:
+        {{
+        "game_definition": "string", // What is the definition of this game?.
+        "winning_condition": "string", // How to win the game.
+        "move_constraints": "string" // What actions are allowed per turn.
+        }}
+        """
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+        game_definition = parsed_content.get("game_definition")
+        winning_condition = parsed_content.get("winning_condition")
+        move_constraints = parsed_content.get("move_constraints")
+
+
+        strategy_prompt = f"""
+        Based on the game information below, derive the **optimal strategy**.
+
+        **Game:** {game_definition}  
+        **Winning Condition:** {winning_condition}  
+        **Move Constraints:** {move_constraints}
+
+        ### Format Response as:
+        {{
+        "state_evaluation": "string", // How to assess the game state.
+        "winning_strategy": "string", // Winning strategy in this turn to win this game.
+        "endgame_tactics": "string" // Best strategy in a near-win situation.}}
+        """
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+
+        state_evaluation = parsed_content.get("state_evaluation")
+        winning_strategy = parsed_content.get("winning_strategy")
+        endgame_tactics = parsed_content.get("endgame_tactics")
+
+
+    for agent in [agent1, agent2, agent3]:
+
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
+
+        **Game:** {game_definition}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
+
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
+
+        ### Format Response as:
+
+        {{
+        "optimized_prompt": "string", // The refined prompt that clearly directs decision-making. }}
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
+
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        one_new_prompt = f"""{optimized_prompt}\n
+
+        **Current State:**  
+        - There are {remaining_items} items left.  
+    
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
+
+        ### Format Response as:
+        {{
+        "reasoning": "string", // Explanation of the move based on the strategy.
+        "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.}}
+        """
+        one_parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a game theorist and strategist.")
+        one_reasoning = one_parsed_content.get("reasoning")
+        one_action = one_parsed_content.get("action")
+
+        if i == 0:
+            initial_moves['agent1'] = one_action
+            initial_reasonings['agent1'] = one_reasoning
+            one_prompt = optimized_prompt
+        if i == 1:
+            initial_moves['agent2'] = one_action
+            initial_reasonings['agent2'] = one_reasoning
+            two_prompt = optimized_prompt
+        if i == 2:
+            initial_moves['agent3'] = one_action
+            initial_reasonings['agent3'] = one_reasoning
+            three_prompt = optimized_prompt
+
+        i += 1
+
+
+    for k in range(debate_rounds):
+        i = 0
+        for agent in [agent1, agent2, agent3]:
+            
+            if i == 0:
+                prompt = f"""
+                {one_prompt}\n
+
+                You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
+                One agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Another agent argues that you have to choose move as: {initial_moves['agent3']} by the reason: {initial_reasonings['agent3']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Format Response as:
+                {{
+                "reasoning": "string", // Explanation of the move based on the strategy.
+                "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.
+                }}
+                """
+            if i == 1:
+                prompt = f"""
+                {two_prompt}\n
+
+                You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Another agent argues that you have to choose move as: {initial_moves['agent3']} by the reason: {initial_reasonings['agent3']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Format Response as:
+                {{
+                "reasoning": "string", // Explanation of the move based on the strategy.
+                "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.
+                }}
+                """
+            if i == 2:
+                prompt = f"""
+                {three_prompt}\n
+
+                You initially chose {initial_moves['agent3']} items at first trial by the reason: '{initial_reasonings['agent3']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Another agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Format Response as:
+                {{
+                "reasoning": "string", // Explanation of the move based on the strategy.
+                "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.
+                }}
+                """
+            
+
+            parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Game player and debating the best move.")
+            initial_reasoning = parsed_content.get("reasoning")
+            initial_action = parsed_content.get("action")
+            if i == 0:
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+            if i == 1:
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+
+            if i == 2:
+                a2_action = initial_action
+                a2_reasoning = initial_reasoning
+                
+            i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
+        initial_moves['agent3'] = a2_action
+        initial_reasonings['agent3'] = a2_reasoning
+
+        if len(set(initial_moves.values())) == 1:
+            return initial_reasoning, initial_action
+
+    return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+
+def get_move_dreamad_one(agent1, agent2, remaining_items, max_take, last_taken):
+    initial_moves = {}
+    initial_reasonings = {}
+    i = 0
+    for agent in [agent1]:
+        prompt = f"""
+        #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+        #Objective:\n Your goal is to win the game by avoiding taking the last remaining item. The person who takes the last item loses.\n\n
+        #Game Rule:\n 1. There is a single pile of stones.\n
+        2. Players take turns to take stones.\n
+        3. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+        4. The player who takes the last stone loses the game.\n\n
+        #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+        The last player took {last_taken} stones.\n
+        You can take between 1 and {max_take} stones on your turn, where {max_take} = min(2 × {last_taken}, {remaining_items}).\n\n
+
+        #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
+        """
+        #################prompt1#################
+        game_prompt = f"""
+        Below is a game description. Extract key information.
+
+        **Game Description:**
+        {prompt}
+
+        ### Format Response as:
+        {{
+        "game_definition": "string", // What is the definition of this game?.
+        "winning_condition": "string", // How to win the game.
+        "move_constraints": "string" // What actions are allowed per turn.
+        }}
+        """
+    
+        parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+        game_definition = parsed_content.get("game_definition")
+        winning_condition = parsed_content.get("winning_condition")
+        move_constraints = parsed_content.get("move_constraints")
+
+
+        strategy_prompt = f"""
+        Based on the game information below, derive the **optimal strategy**.
+
+        **Game:** {game_definition}  
+        **Winning Condition:** {winning_condition}  
+        **Move Constraints:** {move_constraints}
+
+        ### Format Response as:
+        {{
+        "state_evaluation": "string", // How to assess the game state.
+        "winning_strategy": "string", // Winning strategy in this turn to win this game.
+        "endgame_tactics": "string" // Best strategy in a near-win situation.}}
+        """
+        parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+
+        state_evaluation = parsed_content.get("state_evaluation")
+        winning_strategy = parsed_content.get("winning_strategy")
+        endgame_tactics = parsed_content.get("endgame_tactics")
+
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
+
+        **Game:** {game_definition}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
+
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
+
+        ### Format Response as:
+
+        {{
+        "optimized_prompt": "string", // The refined prompt that clearly directs decision-making. }}
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.7)
+
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        one_new_prompt = f"""{optimized_prompt}\n
+
+        **Current State:**  
+        - There are {remaining_items} items left.  
+    
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
+
+        ### Format Response as:
+        {{
+        "reasoning": "string", // Explanation of the move based on the strategy.
+        "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.}}
+        """
+
+
+    for agent in [agent1, agent2]:
+
+        one_parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a game theorist and strategist.")
+        one_reasoning = one_parsed_content.get("reasoning")
+        one_action = one_parsed_content.get("action")
+
+        if i == 0:
+            initial_moves['agent1'] = one_action
+            initial_reasonings['agent1'] = one_reasoning
+            one_prompt = optimized_prompt
+        if i == 1:
+            initial_moves['agent2'] = one_action
+            initial_reasonings['agent2'] = one_reasoning
+            two_prompt = optimized_prompt
+
+        i += 1
+
+
+    for _ in range(debate_rounds):
+        i = 0
+        for agent in [agent1, agent2]:
+            
+            if i == 0:
+                prompt = f"""
+                {one_prompt}\n
+
+                You initially chose {initial_moves['agent1']} items at first trial by the reason: '{initial_reasonings['agent1']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Format Response as:
+                {{
+                "reasoning": "string", // Explanation of the move based on the strategy.
+                "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.
+                }}
+                """
+            if i == 1:
+                prompt = f"""
+                {two_prompt}\n
+
+                You initially chose {initial_moves['agent2']} items at first trial by the reason: '{initial_reasonings['agent2']}'.\n
+                Other agent argues that you have to choose move as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.\n
+                Considering the other's opinion and your strategy, refine or confirm your move.\n
+
+                ### Format Response as:
+                {{
+                "reasoning": "string", // Explanation of the move based on the strategy.
+                "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.
+                }}
+                """
+
+            parsed_content = get_agent_response(agent, prompt, system_prompt="You are a skilled Game player and debating the best move.")
+
+            initial_reasoning = parsed_content.get("reasoning")
+            initial_action = parsed_content.get("action")
+            if i == 0:
+                a0_action = initial_action
+                a0_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'my action: ', initial_action)
+                # print('debate round:, ', t, 'my reasoning: ', initial_reasoning)    
+            if i == 1:
+                a1_action = initial_action
+                a1_reasoning = initial_reasoning
+                
+                # print('debate round:, ', t, 'others action: ', initial_action)
+                # print('debate round:, ', t, 'others reasoning: ', initial_reasoning)   
+            i += 1
+        initial_moves['agent1'] = a0_action
+        initial_reasonings['agent1'] = a0_reasoning
+        initial_moves['agent2'] = a1_action
+        initial_reasonings['agent2'] = a1_reasoning
+            
+        if len(set(initial_moves.values())) == 1:
+            return initial_reasoning, initial_action
+
+    return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
+
 def play_fibonacci_nim_game(total_items, verbose=False):
     # Create output file path
     file_path = f'/home/jihwan/NashIP/result/FN20_M/{args.agent1_model}_{args.agent1_prompt}_{n_step_lookahead}_{args.agent2_model}_{args.agent2_prompt}.txt'
@@ -1182,14 +1789,14 @@ def play_fibonacci_nim_game(total_items, verbose=False):
                 reasoning, move = get_move_with_reflection(current_agent, current_items, max_take, last_taken)
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, current_items, max_take, last_taken)
-            elif current_agent["prompting_method"] == "self_play_debate":
-                reasoning, move = self_play_debate(current_agent, other_agent, current_items, n_step_lookahead, max_take, last_taken)
-            elif current_agent["prompting_method"] == "self_play_debate_exp":
-                reasoning, move = self_play_debate_exp(current_agent, other_agent, current_items, n_step_lookahead, max_take, last_taken)
-            elif current_agent["prompting_method"] == "bias_removed":
-                reasoning, move = bias_removed(current_agent, current_items, max_take, last_taken)
-            elif current_agent["prompting_method"] == "bias_mitigated":
-                reasoning, move = bias_mitigated(current_agent, current_items, max_take, last_taken)
+            elif current_agent["prompting_method"] == "dreamad":
+                reasoning, move = get_move_dreamad(current_agent, current_agent, current_items, max_take, last_taken)
+            elif current_agent["prompting_method"] == "dreamad_three":
+                reasoning, move = get_move_dreamad_three(current_agent, current_agent, current_agent, current_items, max_take, last_taken)
+            elif current_agent["prompting_method"] == "dreamad_one":
+                reasoning, move = get_move_dreamad_one(current_agent, current_agent, current_items, max_take, last_taken)
+            elif current_agent["prompting_method"] == "simple":
+                reasoning, move = get_move(current_agent, current_items, max_take, last_taken)
             elif current_agent["prompting_method"] == "basic":
                 reasoning, move = get_basic_move(current_agent, current_items, max_take, last_taken)
             else:
