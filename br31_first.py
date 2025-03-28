@@ -331,6 +331,117 @@ def get_consistent_move(agent, remaining_items, num_responses):
 
     return reasoning, most_common_move
 
+def get_consistent_diverse_move(agent, remaining_items, num_responses):
+    moves = []
+
+    prompt = f"""
+        #Game Role:\n You are {agent['name']}, a participant in a game of Nim variants.\n\n
+        #Objective:\n Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.\n\n
+        #Game Rule:\n There is a single pile of items. You can take between 1 and {max_take} items on your turn.\n\n
+        #Current State:\n There are {remaining_items} items remaining in the pile.\n\n
+        #Task:\nBased on the current state of the game, decide how many items you will take (between 1 and {max_take}) on this turn.\n
+        """
+        #################prompt1#################
+    game_prompt = f"""
+    Below is a game description. Extract key information.
+
+    **Game Description:**
+    {prompt}
+
+    ### Format Response as:
+    {{
+    "game_type": "string", // Name of the game (if identifiable).
+    "winning_condition": "string", // How to win the game.
+    "move_constraints": "string" // What actions are allowed per turn.
+    }}
+    """
+
+    parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+    game_type = parsed_content.get("game_type")
+    winning_condition = parsed_content.get("winning_condition")
+    move_constraints = parsed_content.get("move_constraints")
+
+
+    strategy_prompt = f"""
+    Based on the game information below, derive the **optimal strategy**.
+
+    **Game:** {game_type}  
+    **Winning Condition:** {winning_condition}  
+    **Move Constraints:** {move_constraints}
+
+    ### Format Response as:
+    {{
+    "state_evaluation": "string", // How to assess the game state.
+    "winning_strategy": "string", // Winning strategy in this turn to win this game.
+    "endgame_tactics": "string" // Best strategy in a near-win situation.}}
+    """
+    # print("Strategy Prompt: ", strategy_prompt)
+    parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+    # print(2)
+
+    state_evaluation = parsed_content.get("state_evaluation")
+    winning_strategy = parsed_content.get("winning_strategy")
+    endgame_tactics = parsed_content.get("endgame_tactics")
+
+    for _ in range(num_responses):
+
+        final_prompt = f"""
+        Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+        ##Initial prompt: {prompt}\n
+
+        **Game:** {game_type}  
+        **Strategy:**  
+        - State Evaluation: {state_evaluation}  
+        - Winning Strategy: {winning_strategy}  
+        - Endgame Tactics: {endgame_tactics}  
+
+        ### Instructions:
+        1. The new prompt must **clearly guide decision-making**.
+        2. It should **force the model to prioritize winning moves**.
+        3. Language should be **direct, logical, and assertive**.
+        4. Do NOT include the answer—only refine the prompt.
+        5. Do NOT define the format of the output.
+
+        ### Format Response as:
+
+        {{
+        "optimized_prompt": "string", // The refined prompt that clearly directs decision-making. }}
+        """
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=spc_temperature)
+
+        optimized_prompt = parsed_content.get("optimized_prompt")
+
+        one_new_prompt = f"""{optimized_prompt}\n
+
+        **Current State:**  
+        - There are {remaining_items} items left.  
+        - You can take 1 to 3 items per turn. 
+        ### Instructions:
+        1. **If a winning move exists, take it immediately.**  
+        2. **Otherwise, follow optimal move principles.**  
+        3. Justify your move using the extracted strategy.
+
+        ### Format Response as:
+        {{
+        "reasoning": "string", // Explanation of the move based on the strategy.
+        "action": integer // Chosen move (1, 2, or 3). }}
+        """
+        parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a skilled Nim player.", temperature=1.0)
+        reasoning = parsed_content.get("reasoning")
+        action = parsed_content.get("action")
+
+        if int(action) > 3:
+            action = 3
+        if int(action) < 1:
+            action = 1
+        move = int(action)
+        moves.append(move)
+    
+    most_common_move = Counter(moves).most_common(1)[0][0]
+
+    return reasoning, most_common_move
+
 # Function for self-reflection prompting
 def get_move_with_reflection(agent, remaining_items):
     prompt_initial = f"""
@@ -1221,8 +1332,8 @@ def play_nim_game(total_items, max_take, verbose=False):
 
             if current_agent["prompting_method"] == "self_consistency":
                 reasoning, move = get_consistent_move(current_agent, current_items, self_consistency_count)
-            # elif current_agent["prompting_method"] == "n_step_lookahead":
-            #     move = get_move_with_n_step_lookahead(current_agent, other_agent, current_items)
+            elif current_agent["prompting_method"] == "diverse_consistency":
+                reasoning, move = get_consistent_diverse_move(current_agent, current_items, self_consistency_count)
             elif current_agent["prompting_method"] == "simple":
                 reasoning, move = get_move(current_agent, current_items) 
             elif current_agent["prompting_method"] == "self_reflection":

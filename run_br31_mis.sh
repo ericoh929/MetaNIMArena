@@ -3,10 +3,10 @@
 # Define the list of configurations for each parameter
 AGENT1_MODELS=("gemini-1.5-flash") #("gpt-4o-mini" "gpt-4o" "gpt-4o-large")
 AGENT2_MODELS=("gpt-4o")
-AGENT1_PROMPTS=("self_consistency") #("bias_mitigate_debate") #
+AGENT1_PROMPTS=("diverse_consistency") #("bias_mitigate_debate") #
 AGENT2_PROMPTS=("basic")
 LOOK_AHEAD_VALUES=(0)
-NUM_GAMES_VALUES=(50)
+NUM_GAMES_VALUES=(48)
 
 # Output directory for logs
 OUTPUT_DIR="/home/jihwan/NashIP/result/BR20"

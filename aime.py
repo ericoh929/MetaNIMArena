@@ -18,7 +18,7 @@ args = parser.parse_args()
 
 # Initialize client and dataset
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-dataset = load_dataset("Maxwell-Jia/AIME_2024", split="train")
+dataset = load_dataset("AI-MO/aimo-validation-amc", split="train")
 
 # get_agent_response 함수: 모델 별로 JSON 형태의 응답을 파싱하여 반환
 def get_agent_response(agent, prompt, system_prompt="Output your answer as a valid JSON with keys 'reasoning' and 'answer'. The value of key 'answer' should be only integer.", temperature=0.7):
@@ -352,8 +352,8 @@ def simulate(prompt_method):
         # if num < 25:
         #     continue
         # 데이터셋의 문제와 정답 키 (필요에 따라 키 이름을 수정)
-        question = item.get("Problem")
-        true_answer = item.get("Answer")
+        question = item.get("problem")
+        true_answer = int(item.get("answer"))
         if question is None or true_answer is None:
             continue
 

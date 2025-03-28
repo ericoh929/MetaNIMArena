@@ -1,0 +1,16 @@
+
+Starting Game 1
+
+Starting Game 2
+Traceback (most recent call last):
+  File "/home/jihwan/NashIP/br31_mis_first.py", line 1383, in <module>
+    simulate_games(num_games, total_items, max_take)
+  File "/home/jihwan/NashIP/br31_mis_first.py", line 1375, in simulate_games
+    winner = play_nim_game(total_items, max_take, verbose=True)
+  File "/home/jihwan/NashIP/br31_mis_first.py", line 1334, in play_nim_game
+    reasoning, move = get_consistent_diverse_move(current_agent, current_items, self_consistency_count)
+  File "/home/jihwan/NashIP/br31_mis_first.py", line 430, in get_consistent_diverse_move
+    if int(action) > 3:
+TypeError: int() argument must be a string, a bytes-like object or a number, not 'NoneType'
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+E0000 00:00:1743138850.497211  941575 init.cc:229] grpc_wait_for_shutdown_with_timeout() timed out.

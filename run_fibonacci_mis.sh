@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Define the list of configurations for each parameter
-AGENT1_MODELS=("gemini-1.5-flash") #("gpt-4o-mini" "gpt-4o" "gpt-4o-large")
+AGENT1_MODELS=("gemini-1.5-flash" "gpt-4o-mini") #("gpt-4o-mini" "gpt-4o" "gpt-4o-large")
 AGENT2_MODELS=("gpt-4o")
-AGENT1_PROMPTS=("simple") #("self_play_debate" "basic" "debate" "self_reflection" "self_consistency")
+AGENT1_PROMPTS=("diverse_consistency") #("self_play_debate" "basic" "debate" "self_reflection" "self_consistency")
 AGENT2_PROMPTS=("basic")
 LOOK_AHEAD_VALUES=(0)
-NUM_GAMES_VALUES=(40)
+NUM_GAMES_VALUES=(50)
 
 # Output directory for logs
 OUTPUT_DIR="/home/jihwan/NashIP/result/FN20_M"
