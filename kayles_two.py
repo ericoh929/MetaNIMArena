@@ -383,7 +383,7 @@ def get_consistent_move(agent, piles, num_responses):
             pin_indices = parsed_content.get("pin_indices")
 
             if is_valid_move(piles, pile_index, pin_indices):
-                moves.append((pile_index, pin_indices))
+                moves.append((pile_index, tuple(pin_indices)))
                 reasoning_list.append(reasoning)
                 break
 
@@ -397,15 +397,17 @@ def get_consistent_move(agent, piles, num_responses):
                 pile_index, pin_index = random.choice(available_pins)
                 pin_indices = [pin_index]
                 reasoning = "Fallback: Randomly selected a single available pin after multiple failed attempts."
-                moves.append((pile_index, pin_indices))
+                moves.append((pile_index, tuple(pin_indices)))
                 reasoning_list.append(reasoning)
 
     # Determine the most common valid move
+    print(moves)
+
     most_common_move = Counter(moves).most_common(1)[0][0]
     # Get the reasoning for the most common move
     consistent_reasoning = reasoning_list[moves.index(most_common_move)]
 
-    return consistent_reasoning, most_common_move
+    return consistent_reasoning, list(most_common_move)
 
 
 def get_move_with_reflection(agent, piles):

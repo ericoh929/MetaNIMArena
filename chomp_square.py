@@ -901,7 +901,7 @@ def play_square_chomp_game(size=5, verbose=False):
             other_agent = agents[(turn + 1) % 2]
 
             if current_agent["prompting_method"] == "self_consistency":
-                reasoning, move = get_consistent_move(current_agent, grid)
+                reasoning, move = get_consistent_move(current_agent, grid, self_consistency_count)
             elif current_agent["prompting_method"] == "basic":
                 reasoning, move = get_basic_move(current_agent, grid)
             elif current_agent["prompting_method"] == "simple":
@@ -917,11 +917,6 @@ def play_square_chomp_game(size=5, verbose=False):
                 return None
 
             row, col = move
-
-            # Validate the move
-            if not is_valid_move_chomp(grid, row, col):
-                print(f"Invalid move by {current_agent['name']}.", file=f)
-                return other_agent["name"]
 
             # Check if the player selected the losing position (N-1, N-1)
             if row == size - 1 and col == size - 1:
@@ -944,7 +939,6 @@ def play_square_chomp_game(size=5, verbose=False):
 
 
 def is_valid_move_chomp(grid, row, col):
-    print('check:! ', grid, row, col)
     size = len(grid)
     return 0 <= row < size and 0 <= col < size and grid[row][col]
 

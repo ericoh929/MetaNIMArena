@@ -412,6 +412,8 @@ def get_consistent_move(agent, pins, num_responses):
         action = tuple(action)
         moves.append(action)
 
+    print('total moves:', moves)
+
     # Determine the most common valid move
     most_common_move = Counter(moves).most_common(1)[0][0]
     # Get the reasoning for the most common move

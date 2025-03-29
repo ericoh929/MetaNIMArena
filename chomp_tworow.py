@@ -30,7 +30,7 @@ client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"),)
 parser = argparse.ArgumentParser(description='arguments for training')
 
 parser.add_argument('--agent1_model',     type=str,   default=None, help='model')
-parser.add_argument('--agent2_model',     type=str,   default=None, help='model')
+parser.add_argument('--agent2_model',     type=str,   default='gpt-4o', help='model')
 parser.add_argument('--agent1_prompt',     type=str,   default='basic', help='prompt_method')
 parser.add_argument('--agent2_prompt',     type=str,   default='basic', help='prompt_method')
 parser.add_argument('--look_ahead',     type=int,   default='0', help='prompt_method')
@@ -147,21 +147,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
 
     while True:
         try:
-            if agent["model"] == "llama":
-                split_key = "<|start_header_id|>assistant<|end_header_id|>\n"
-                response = say_model(system_prompt, prompt)
-                parsed_content = parse_content(response, split_key)
-                if parsed_content:
-                    return parsed_content
-
-            elif agent["model"] == "gemma":
-                split_key = "<start_of_turn>model\n"
-                response = say_model(system_prompt, prompt)
-                parsed_content = parse_content(response, split_key)
-                if parsed_content:
-                    return parsed_content
-
-            elif agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
+            if agent["model"] in ["gemini-1.5-flash", "gemini-1.5-pro"]:
                 generation_config = {
                     "temperature": temperature,
                     "top_p": 0.95,
@@ -194,7 +180,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                 parsed_content = json.loads(re.search(r'\{.*?\}', content, re.DOTALL).group(0).replace('\xa0', '').strip())
                 if parsed_content:
                     return parsed_content
-
+            print('agent model: ', agent["model"])
             print("Error encountered. Retrying in 2 seconds...")
             time.sleep(2)  # Delay to prevent rapid retries
         except KeyboardInterrupt:
@@ -377,7 +363,7 @@ def get_consistent_move(agent, grid, num_responses):
             row = parsed_content.get("row")
             col = parsed_content.get("col")
 
-            if is_valid_move_chomp(grid, row, col):
+            if is_valid_move_chomp(grid, int(row), int(col)):
                 break
 
             retries += 1
@@ -390,10 +376,10 @@ def get_consistent_move(agent, grid, num_responses):
                 row, col = random.choice(available_positions)
                 reasoning = "Fallback: Randomly selected a position after multiple failed attempts."
 
-        action = (row, col)
+        action = (int(row), int(col))
         moves.append(action)
         reasoning_list.append(reasoning)
-    
+
     most_common_move = Counter(moves).most_common(1)[0][0]
     consistent_reasoning = reasoning_list[moves.index(most_common_move)]
 
@@ -999,7 +985,7 @@ def play_two_row_chomp_game(num_columns=8, verbose=False):
             other_agent = agents[(turn + 1) % 2]
 
             if current_agent["prompting_method"] == "self_consistency":
-                reasoning, move = get_consistent_move(current_agent, grid)
+                reasoning, move = get_consistent_move(current_agent, grid, self_consistency_count)
             elif current_agent["prompting_method"] == "simple":
                 reasoning, move = get_move(current_agent, grid)
             elif current_agent["prompting_method"] == "self_reflection":
@@ -1015,11 +1001,6 @@ def play_two_row_chomp_game(num_columns=8, verbose=False):
                 return None
 
             row, col = move
-
-            # Validate the move
-            if not is_valid_move_chomp(grid, row, col):
-                print(f"Invalid move by {current_agent['name']}.", file=f)
-                return other_agent["name"]
 
             # Apply the move
             apply_move_chomp(grid, row, col)

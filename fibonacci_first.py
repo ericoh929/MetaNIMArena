@@ -584,6 +584,195 @@ def get_move_with_reflection(agent, remaining_items, max_take, last_taken):
 
     return refined_reasoning, refined_action
 
+def get_move_with_diverse_reflection(agent, remaining_items, max_take, last_taken):
+    prompt = f"""
+        #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+        #Objective:\n Your goal is to win the game by taking all remaining stones on your turn, leaving no items for your opponent. The person who takes the last stones wins.\n\n
+        #Game Rule:\n 1. There is a single pile of stones.\n
+        2. Players take turns to take stones.\n
+        3. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+        4. The player who takes the last stone wins the game.\n\n
+        #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+        You can take between 1 and {max_take} stones on your turn, where {max_take} = min(2 × {last_taken}, {remaining_items}).\n\n
+        """
+    game_prompt = f"""
+    Below is a game description. Extract key information.
+
+    **Game Description:**
+    {prompt}
+
+    ### Format Response as:
+    {{
+    "game_definition": "string", // What is the definition of this game?.
+    "winning_condition": "string", // How to win the game.
+    "move_constraints": "string" // What actions are allowed per turn.
+    }}
+    """
+    parsed_content = get_agent_response(agent, game_prompt, system_prompt="You are a game theorist and strategist.",temperature=0.1)
+
+    game_definition = parsed_content.get("game_definition")
+    winning_condition = parsed_content.get("winning_condition")
+    move_constraints = parsed_content.get("move_constraints")
+
+
+    strategy_prompt = f"""
+    Based on the game information below, derive the **optimal strategy**.
+
+    **Game:** {game_definition}  
+    **Winning Condition:** {winning_condition}  
+    **Move Constraints:** {move_constraints}
+
+    ### Format Response as:
+    {{
+    "state_evaluation": "string", // How to assess the game state.
+    "winning_strategy": "string", // Winning strategy in this turn to win this game.
+    "endgame_tactics": "string" // Best strategy in a near-win situation.}}
+    """
+    parsed_content = get_agent_response(agent, strategy_prompt, system_prompt="You are a game theorist and strategist.", temperature=0.1)
+
+    state_evaluation = parsed_content.get("state_evaluation")
+    winning_strategy = parsed_content.get("winning_strategy")
+    endgame_tactics = parsed_content.get("endgame_tactics")
+
+    final_prompt = f"""
+    Refine the initial game prompt to improve decision-making based on the Game and Strategy.
+    ##Initial prompt: {prompt}\n
+
+    **Game:** {game_definition}  
+    **Strategy:**  
+    - State Evaluation: {state_evaluation}  
+    - Winning Strategy: {winning_strategy}  
+    - Endgame Tactics: {endgame_tactics}  
+
+    ### Instructions:
+    1. The new prompt must **clearly guide decision-making**.
+    2. It should **force the model to prioritize winning moves**.
+    3. Language should be **direct, logical, and assertive**.
+    4. Do NOT include the answer—only refine the prompt.
+    5. Do NOT define the format of the output.
+
+    ### Format Response as:
+
+    {{
+    "optimized_prompt": "string", // The refined prompt that clearly directs decision-making. }}
+    """
+    parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are a game theorist and strategist.", temperature=spc_temperature)
+
+    optimized_prompt = parsed_content.get("optimized_prompt")
+
+    one_new_prompt = f"""{optimized_prompt}\n
+
+    **Current State:**  
+    - There are {remaining_items} items left.  
+
+    ### Instructions:
+    1. **If a winning move exists, take it immediately.**  
+    2. **Otherwise, follow optimal move principles.**  
+    3. Justify your move using the extracted strategy.
+
+    ### Format Response as:
+    {{
+    "reasoning": "string", // Explanation of the move based on the strategy.
+    "action": integer // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.}}
+    """
+
+    parsed_content = get_agent_response(agent, one_new_prompt, system_prompt="You are a skilled Fibonacci player.")
+
+    initial_reasoning = parsed_content.get("reasoning")
+    action = parsed_content.get("action")
+
+    initial_move = int(action)
+
+    for k in range(num_refine):
+        if last_taken is None:
+            feedback_prompt = f"""
+            #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+            #Objective:\n Your goal is to win the game by taking all remaining stones on your turn, leaving no items for your opponent. The person who takes the last stones wins.\n\n
+            #Game Rule:\n 1. There is a single pile of stones.\n
+            2. Players take turns to take stones.\n
+            3. The first player can take any number of stones, but not all the stones in the first move.\n
+            4. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+            5. The player who takes the last stone wins the game.\n\n
+            #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+            You can take between 1 and {max_take-1} stones on your turn, where {max_take-1} = min(2 × {last_taken}, {remaining_items-1}).\n\n
+            #Task:\nYou are the first player. Based on the current state of the game, give a feedback on the first trial's reasoning and action.\n\n
+            #First trial's reasoning and action:\nYou initially chose {initial_move} items at first trial by the reason: '{initial_reasoning}'.\n\n
+
+            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"feedback": string  // This is the feedback for the selected action and reasoning\n}}
+                """
+        else:
+            feedback_prompt = f"""
+            #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+            #Objective:\n Your goal is to win the game by taking all remaining stones on your turn, leaving no items for your opponent. The person who takes the last stones wins.\n\n
+            #Game Rule:\n 1. There is a single pile of stones.\n
+            2. Players take turns to take stones.\n
+            3. The first player can take any number of stones, but not all the stones in the first move.\n
+            4. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+            5. The player who takes the last stone wins the game.\n\n
+            #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+            The last player took {last_taken} stones.\n
+            You can take between 1 and {max_take} stones on your turn, where {max_take} = min(2 × {last_taken}, {remaining_items}).\n\n
+            #Task:\nBased on the current state of the game, , give a feedback on the first trial's reasoning and action.\n\n
+            #First trial's reasoning and action:\nYou initially chose {initial_move} items at first trial by the reason: '{initial_reasoning}'.\n\n
+
+            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"feedback": string  // This is the feedback for the selected action and reasoning\n}}
+            """
+        
+        parsed_content = get_agent_response(agent, feedback_prompt, system_prompt="You are a skilled Fibonacci player.")
+        feedback = parsed_content.get("feedback")
+
+        if last_taken is None:
+            refine_prompt = f"""
+            #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+            #Objective:\n Your goal is to win the game by taking all remaining stones on your turn, leaving no items for your opponent. The person who takes the last stones wins.\n\n
+            #Game Rule:\n 1. There is a single pile of stones.\n
+            2. Players take turns to take stones.\n
+            3. The first player can take any number of stones, but not all the stones in the first move.\n
+            4. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+            5. The player who takes the last stone wins the game.\n\n
+            #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+            You can take between 1 and {max_take-1} stones on your turn, where {max_take-1} = min(2 × {last_taken}, {remaining_items-1}).\n\n
+
+            You initially chose {initial_move} items at first trial by the reason: '{initial_reasoning}'.\n\n
+            You recieved feedback on your action and reasoning: {feedback}\n\n
+
+            #Task:\nYou are the first player. Based on the current state of the game and the feedback, refine your reasoning and action. And finally, decide how many items you will take (between 1 and {remaining_items-1}) on this turn.\n\n
+
+            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take-1}.\n}}
+                """
+        else:
+            refine_prompt = f"""
+            #Game Role:\n You are {agent['name']}, a participant in a simple Fibonacci game.\n\n
+            #Objective:\n Your goal is to win the game by taking all remaining stones on your turn, leaving no items for your opponent. The person who takes the last stones wins.\n\n
+            #Game Rule:\n 1. There is a single pile of stones.\n
+            2. Players take turns to take stones.\n
+            3. The first player can take any number of stones, but not all the stones in the first move.\n
+            4. On subsequent turns, the number of stones a player can take must be at least 1 and at most twice the number of stones the previous player took.\n
+            5. The player who takes the last stone wins the game.\n\n
+            #Current State:\n There are {remaining_items} stones remaining in the pile.\n
+            The last player took {last_taken} stones.\n
+            You can take between 1 and {max_take} stones on your turn, where {max_take} = min(2 × {last_taken}, {remaining_items}).\n\n
+
+            You initially chose {initial_move} items at first trial by the reason: '{initial_reasoning}'.\n\n
+            You recieved feedback on your action and reasoning: {feedback}\n\n
+
+            #Task:\nBased on the current state of the game and the feedback, refine your reasoning and action. And finally, decide how many items you will take (between 1 and {max_take}) on this turn.\n\n
+
+            The output should be a markdown code snippet formatted in the following schema, including the leading and trailing \\`\\`\\`json" and "\\`\\`\\`":\n\n```\n{{\n\t"reasoning": string  // This is the reasons for the action\n\t"action": integer  // This is an action you take based on the reasoning. Only provide integer between 1 and {max_take}.\n}}
+            """
+
+        parsed_content = get_agent_response(agent, refine_prompt, system_prompt="You are a skilled Fibonacci player.")
+        refined_reasoning = parsed_content.get("reasoning")
+        refined_action = parsed_content.get("action")
+
+        if initial_move == int(refined_action):
+            return refined_reasoning, refined_action
+        else:
+            initial_move = refined_action
+            initial_reasoning = refined_reasoning
+
+    return refined_reasoning, refined_action
+
 
 def get_move_with_debate(agent1, agent2, remaining_items, max_take, last_taken):
     initial_moves = {}
@@ -1313,6 +1502,8 @@ def play_fibonacci_nim_game(total_items, verbose=False):
             #     move = get_move_with_n_step_lookahead(current_agent, other_agent, current_items)
             elif current_agent["prompting_method"] == "self_reflection":
                 reasoning, move = get_move_with_reflection(current_agent, current_items, max_take, last_taken)
+            elif current_agent["prompting_method"] == "diverse_reflection":
+                reasoning, move = get_move_with_diverse_reflection(current_agent, current_items, max_take, last_taken)
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, current_items, max_take, last_taken)
             elif current_agent["prompting_method"] == "dreamad":
