@@ -150,6 +150,7 @@ def get_agent_response(agent, prompt, system_prompt="You are a skilled Nim playe
                         {"role": "user", "content": prompt},
                     ],
                     model=agent["model"],
+                    response_format={"type": "json_object"},
                     temperature=temperature,
                 )
                 content = response.choices[0].message.content
@@ -644,6 +645,119 @@ def get_move_with_diverse_reflection(agent, remaining_items):
             initial_reasoning = refined_reasoning
 
     return refined_reasoning, refined_action
+
+
+def get_move_with_debate_2(agent1, agent2, judge_agent, remaining_items, debate_rounds=3):
+    # 초기 단계: 한 번의 프롬프트로 초기 reasoning과 answer를 도출 (모든 에이전트가 동일한 초기 답안을 공유)
+    prompt_initial = f"""
+    #Game Role:
+    You are a participant in a game of Nim variants.
+    
+    #Objective:
+    Your goal is to win the game by taking all remaining items on your turn, leaving no items for your opponent. The person who takes the last item wins.
+    
+    #Game Rule:
+    There is a single pile of items. You can take between 1 and {max_take} items on your turn.
+    
+    #Current State:
+    There are {remaining_items} items remaining in the pile.
+    
+    #Task:
+    Based on the current state, decide how many items to take (between 1 and {max_take}). Provide your reasoning and answer.
+    
+    Output your answer as a JSON formatted snippet with keys "reasoning" (string) and "action" (integer).
+    """
+    # 초기 답안은 한 번만 생성해서 두 에이전트가 공유하도록 함.
+    initial_result = get_agent_response(agent1, prompt_initial, system_prompt="You are a skilled Nim player.", temperature=0.7)
+    initial_reasoning = initial_result.get("reasoning")
+    initial_action = initial_result.get("action")
+    
+    # 초기 답안을 두 에이전트 모두에게 할당 (affirmative와 negative 모두 동일한 초기 답안을 기반으로 시작)
+    initial_moves = {'agent1': initial_action, 'agent2': initial_action}
+    initial_reasonings = {'agent1': initial_reasoning, 'agent2': initial_reasoning}
+    
+    # debate history 기록 (문자열로 누적)
+    debate_history = f"Initial Answer: {initial_action} with reasoning: {initial_reasoning}\n"
+    
+    # Debate rounds: 3 라운드 진행
+    for round_num in range(1, debate_rounds + 1):
+        # affirmative (agent1)와 negative (agent2) 에이전트의 답변을 각각 도출
+        new_moves = {}
+        new_reasonings = {}
+        
+        # Agent1 (Affirmative)
+        prompt_affirmative = f"""
+        #Game Role:
+        You are {agent1['name']}, playing as the affirmative side. You support the initial answer.
+        
+        #Objective:
+        Your goal is to defend the initial answer and provide strong reasoning in its favor.
+        
+        #Current State:
+        There are {remaining_items} items remaining in the pile, and the initial answer was {initial_moves['agent1']} with reasoning: '{initial_reasonings['agent1']}'.
+        
+        #Task:
+        Considering your viewpoint and the negative side's arguments, refine or confirm your move (an integer between 1 and {max_take}). Provide your updated reasoning and answer.
+        
+        Output your answer as a JSON formatted snippet with keys "reasoning" and "action".
+        """
+        result_affirm = get_agent_response(agent1, prompt_affirmative, 
+                                           system_prompt="You are affirmative side. Please express your viewpoints.", 
+                                           temperature=0.7)
+        new_moves['agent1'] = result_affirm.get("action")
+        new_reasonings['agent1'] = result_affirm.get("reasoning")
+        
+        # Agent2 (Negative)
+        prompt_negative = f"""
+        #Game Role:
+        You are {agent2['name']}, playing as the negative side. You disagree with the initial answer.
+        
+        #Objective:
+        Your goal is to challenge the initial answer and provide reasons why it might be incorrect.
+        
+        #Current State:
+        There are {remaining_items} items remaining in the pile, and the initial answer was {initial_moves['agent2']} with reasoning: '{initial_reasonings['agent2']}'.
+        
+        #Task:
+        Considering your opposing viewpoint, provide updated reasoning and an alternative answer (an integer between 1 and {max_take}).
+        
+        Output your answer as a JSON formatted snippet with keys "reasoning" and "action".
+        """
+        result_neg = get_agent_response(agent2, prompt_negative, 
+                                        system_prompt="You are negative side. You disagree with the affirmative side’s points. Provide your reasons and answer.", 
+                                        temperature=0.7)
+        new_moves['agent2'] = result_neg.get("action")
+        new_reasonings['agent2'] = result_neg.get("reasoning")
+        
+        # 업데이트된 결과를 debate history에 추가
+        debate_history += f"Round {round_num}:\nAffirmative: action={new_moves['agent1']}, reasoning='{new_reasonings['agent1']}'\n"
+        debate_history += f"Negative: action={new_moves['agent2']}, reasoning='{new_reasonings['agent2']}'\n"
+        
+        # 업데이트: 두 에이전트의 최신 결과를 저장
+        initial_moves = int(new_moves)
+        initial_reasonings = new_reasonings
+        
+        # 만약 두 에이전트의 답변(action)이 일치하면 합의된 것으로 종료
+        if new_moves['agent1'] == new_moves['agent2']:
+            return new_reasonings['agent1'], new_moves['agent1']
+    
+    # debate 라운드 후에도 합의가 이루어지지 않은 경우, judge 에이전트를 호출하여 최종 판단
+    judge_prompt = f"""
+    You are a moderator. There have been two debaters (affirmative and negative) discussing the best move in a game of Nim variants. 
+    Debate Topic: Taking items from a single pile with {remaining_items} items remaining, where you can take between 1 and {max_take} items.
+    
+    Debate History:
+    {debate_history}
+    
+    Based on the debate history, please decide which debater's answer is correct. Provide your final judgment by outputting a JSON formatted snippet with keys "reasoning" (explain your decision) and "action" (the chosen move as an integer).
+    """
+    judge_result = get_agent_response(judge_agent, judge_prompt, 
+                                      system_prompt="You are a moderator. Evaluate both sides' arguments and decide which one is correct.", 
+                                      temperature=0.7)
+    final_reasoning = judge_result.get("reasoning")
+    final_action = int(judge_result.get("action"))
+    
+    return final_reasoning, final_action
 
 def get_move_with_debate(agent1, agent2, remaining_items):
     initial_moves = {}
@@ -1485,6 +1599,8 @@ def play_nim_game(total_items, max_take, verbose=False):
                 reasoning, move = get_move_with_diverse_reflection(current_agent, current_items)
             elif current_agent["prompting_method"] == "debate":
                 reasoning, move = get_move_with_debate(current_agent, current_agent, current_items)
+            elif current_agent["prompting_method"] == "debate2":
+                reasoning, move = get_move_with_debate_2(current_agent, current_agent, current_agent, current_items)
             elif current_agent["prompting_method"] == "dreamad":
                 reasoning, move = get_move_dreamad(current_agent, current_agent, current_items)
             elif current_agent["prompting_method"] == "dreamad_three":

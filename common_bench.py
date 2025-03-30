@@ -256,7 +256,7 @@ def Debate(question, labels, texts):
 
 You initially answered as {answer_dict[initial_moves['agent1']]} at first trial by the reason: '{initial_reasonings['agent1']}'.
 Other agent argues that you have to answer as: {answer_dict[initial_moves['agent2']]} by the reason: {initial_reasonings['agent2']}.
-Considering the other's opinion, refine or confirm your move.
+Considering the other's opinion, refine or confirm your move among A, B, C, D, E that best fits.
 """
             if i == 1:
                 prompt = f"""Read the following question and choose the correct answer from the provided choices. Then, output your answer in a JSON format with the key "answer", where the value is the label corresponding to the chosen answer.
@@ -267,7 +267,7 @@ Considering the other's opinion, refine or confirm your move.
 
 You initially answered as {answer_dict[initial_moves['agent2']]} at first trial by the reason: '{initial_reasonings['agent2']}'.
 Other agent argues that you have to answer as: {answer_dict[initial_moves['agent1']]} by the reason: {initial_reasonings['agent1']}.
-Considering the other's opinion, refine or confirm your move.
+Considering the other's opinion, refine or confirm your move among A, B, C, D, E that best fits.
 """
 
             parsed_content = get_agent_response(agent, prompt, system_prompt="You are debating the correct answer. Output your answer as a valid JSON with keys 'reasoning' and 'answer'.")
@@ -780,12 +780,25 @@ Considering the other's opinion, refine or confirm your move.
 
     return initial_reasoning, Counter(initial_moves.values()).most_common(1)[0][0]  # Use most common if no consensus
 
-def Dreamad_fill(question):
+def Dreamad_fill(question, labels, texts):
     initial_moves = {}
     initial_reasonings = {}
     i = 0
     for _ in ['1']:
-        prompt = f"""Question: {question}""" 
+        answer_prompt = ""
+        answer_dict = {}
+        for label, text in zip(labels, texts):
+            answer_prompt += f"{label}: {text}\n"
+            answer_dict[label] = text
+
+        prompt = f"""Read the following question and choose the correct answer from the provided choices. Then, output your answer in a JSON format with the key "answer", where the value is the label corresponding to the chosen answer.
+
+    Question: {question}
+
+    Choices: {answer_prompt}
+
+    Please analyze the question carefully and select the answer among A, B, C, D, E that best fits.
+    """
 
         math_prompt = f"""
 Extract the key information from the problem below.
@@ -794,15 +807,15 @@ Extract the key information from the problem below.
 {prompt}
 
 Task:
-1. Identify the type of problem (e.g., geometry, algebra, probability, etc.)
-2. Summarize all relevant information and constraints in the problem.
+1. Identify the type of problem.
+2. Summarize all relevant information in the problem.
 3. Suggest a good strategy to solve it.
 """
     
-        parsed_content = get_agent_response(agent, math_prompt, system_prompt="You are a good math strategist. Output your answer as a valid JSON with keys 'problem_type', 'given_conditions', and 'solution_strategy'.",temperature=0.1)
+        parsed_content = get_agent_response(agent, math_prompt, system_prompt="You are a good strategist. Output your answer as a valid JSON with keys 'problem_type', 'given_information', and 'solution_strategy'.",temperature=0.1)
 
         problem_type = parsed_content.get("problem_type")
-        given_conditions = parsed_content.get("given_conditions")
+        given_conditions = parsed_content.get("given_information")
         solution_approach = parsed_content.get("solution_strategy")
 
 
@@ -812,7 +825,7 @@ Task:
 
 [Extracted Summary and Strategy]
 Problem Type: {problem_type}  
-Given Condition: {given_conditions}  
+Given Information: {given_conditions}  
 Solution Strategy: {solution_approach}
 
 Task:
@@ -822,7 +835,7 @@ Constraints:
 - Do NOT change the fundamental meaning of the problem.
 - If the original problem is already clear, try adding helpful clarifications or step-by-step structure.
 """
-        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are an expert math problem rewriter. Output your answer as a valid JSON with keys 'trimmed_question'.", temperature=0.7)
+        parsed_content = get_agent_response(agent, final_prompt, system_prompt="You are an expert problem rewriter. Output your answer as a valid JSON with keys 'trimmed_question'.", temperature=0.7)
 
         optimized_prompt = parsed_content.get("trimmed_question")
 
@@ -833,6 +846,8 @@ Given Condition: {given_conditions}
 Solution Strategy: {solution_approach}
 
 Question: {optimized_prompt}
+
+Choices: {answer_prompt}
         """
         # print("One New Prompt: ", one_new_prompt)
         one_parsed_content = get_agent_response(agent, one_new_prompt)
@@ -860,20 +875,24 @@ Question: {optimized_prompt}
                 prompt = f"""Given the below question, make proper reasoning and answer for the question given the format.
 Question: {one_prompt}
 
-You initially answered as {initial_moves['agent1']} at first trial by the reason: '{initial_reasonings['agent1']}'.
-Other agent argues that you have to answer as: {initial_moves['agent2']} by the reason: {initial_reasonings['agent2']}.
-Considering the other's opinion, refine or confirm your move.
+Choices: {answer_prompt}
+
+You initially answered as {answer_dict[initial_moves['agent1']]} at first trial by the reason: '{initial_reasonings['agent1']}'.
+Other agent argues that you have to answer as: {answer_dict[initial_moves['agent2']]} by the reason: {initial_reasonings['agent2']}.
+Considering the other's opinion, refine or confirm your move among A, B, C, D, E that best fits.
 """
             if i == 1:
                 prompt = f"""Given the below question, make proper reasoning and answer for the question given the format.
 Question: {two_prompt}
 
-You initially answered as {initial_moves['agent2']} at first trial by the reason: '{initial_reasonings['agent2']}'.
-Other agent argues that you have to answer as: {initial_moves['agent1']} by the reason: {initial_reasonings['agent1']}.
-Considering the other's opinion, refine or confirm your move.
+Choices: {answer_prompt}
+
+You initially answered as {answer_dict[initial_moves['agent2']]} at first trial by the reason: '{initial_reasonings['agent2']}'.
+Other agent argues that you have to answer as: {answer_dict[initial_moves['agent1']]} by the reason: {initial_reasonings['agent1']}.
+Considering the other's opinion, refine or confirm your move among A, B, C, D, E that best fits.
 """
 
-            parsed_content = get_agent_response(agent, prompt, system_prompt="You are debating the correct answer. Output your answer as a valid JSON with keys 'reasoning' and 'answer'. The value of key 'answer' should be only integer.")
+            parsed_content = get_agent_response(agent, prompt, system_prompt="You are debating the correct answer. Output your answer as a valid JSON with keys 'reasoning' and 'answer'. The value of key 'answer' should be among A, B, C, D, E.")
 
             initial_reasoning = parsed_content.get("reasoning")
             initial_answer = parsed_content.get("answer")
@@ -1026,7 +1045,7 @@ def simulate(prompt_method):
     num = 0
     for item in tqdm(loaded_dataset):
         # num += 1
-        # if num < 81:
+        # if num < 121:
         #     continue
         # 데이터셋의 문제와 정답 키 (필요에 따라 키 이름을 수정)
         question = item.get("question")

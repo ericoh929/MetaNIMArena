@@ -3,7 +3,7 @@
 # Define the list of configurations for each parameter
 AGENT1_MODELS=("gemini-1.5-flash" "gpt-4o-mini") #("gpt-4o-mini" "gpt-4o" "gpt-4o-large")
 AGENT2_MODELS=("gpt-4o")
-AGENT1_PROMPTS=("diverse_reflection") #("bias_mitigate_debate") #original_vs_harmonized_debate "basic" "debate" "self_reflection" "self_consistency"
+AGENT1_PROMPTS=("debate2") #("bias_mitigate_debate") #original_vs_harmonized_debate "basic" "debate" "self_reflection" "self_consistency"
 AGENT2_PROMPTS=("basic")
 TEMPERATURE_VALUES=(0.7)
 LOOK_AHEAD_VALUES=(1)
