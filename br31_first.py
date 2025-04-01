@@ -8,8 +8,6 @@ import re
 from openai import OpenAI
 import time
 from pathlib import Path
-
-import os
 import google.generativeai as genai
 
 genai.configure(api_key='Your GEMINI KEY')
@@ -25,8 +23,6 @@ parser.add_argument('--num_games',     type=int,   default='50', help='Number of
 parser.add_argument('--temperature',     type=float,   default='0.7', help='prompt-refine temperature')
 parser.add_argument('--max_take',     type=int,   default=3, help='prompt_method')
 args = parser.parse_args()
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 # Initialize the game parameters
 total_items = 31  # Total items in the pile (e.g., 21)
@@ -628,6 +624,9 @@ def get_move_dreamad(agent1, agent2, remaining_items):
         optimized_prompt = parsed_content.get("optimized_prompt")
         one_new_prompt = f"""{optimized_prompt}\n
 
+        **Current State:**  
+        - There are {remaining_items} items left.  
+        - You can take 1 to 3 items per turn. 
         ### Instructions:
         1. **If a winning move exists, take it immediately.**  
         2. **Otherwise, follow optimal move principles.**  
@@ -652,7 +651,6 @@ def get_move_dreamad(agent1, agent2, remaining_items):
             two_prompt = optimized_prompt
 
         i += 1
-
 
     for _ in range(debate_rounds):
         i = 0
@@ -701,7 +699,7 @@ def get_move_dreamad(agent1, agent2, remaining_items):
 
 
 def play_nim_game(total_items, max_take, verbose=False):
-    with open(f'/home/jihwan/MetaNIM_Arena/{args.agent1_model}_{args.agent1_prompt}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
+    with open(f'/YourPath/{args.agent1_model}_{args.agent1_prompt}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
         current_items = total_items
         turn = 0
         while current_items > 0:
@@ -743,7 +741,7 @@ def play_nim_game(total_items, max_take, verbose=False):
 
 def simulate_games(num_games, total_items, max_take):
     win_counts = {agent["name"]: 0 for agent in agents}
-    with open(f'/home/jihwan/MetaNIM_Arena/{args.agent1_model}_{args.agent1_prompt}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
+    with open(f'/YourPath/{args.agent1_model}_{args.agent1_prompt}_{args.agent2_model}_{args.agent2_prompt}.txt', 'a') as f:
         for game_num in range(num_games):
             print(f"\nStarting Game {game_num + 1}", file = f)
             print(f"\nStarting Game {game_num + 1}")
