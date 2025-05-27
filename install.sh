@@ -4,7 +4,7 @@ echo "pip upgrade..."
 pip3 install --upgrade pip
 
 echo "packages installing..."
-pip3 install openai==1.55.0
+pip3 install openai==1.55.3 httpx==0.27.2 --force-reinstall
 pip3 install google-ai-generativelanguage==0.6.10
 pip3 install google-api-core==2.23.0
 pip3 install google-api-python-client==2.154.0
