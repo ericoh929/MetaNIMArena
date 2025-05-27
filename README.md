@@ -7,7 +7,7 @@ The repo currently ships five classic combinatorial arenas:
 |------|----------------|
 | **NIM** | normal & misère |
 | **Fibonacci** | normal & misère |
-| **Kayles** | single-row pins |
+| **Kayles** | single & two-row pins |
 | **Chomp** | 2-D chocolate grid |
 | **Corner Queen** | reach lower-left corner |
 
@@ -18,8 +18,8 @@ The repo currently ships five classic combinatorial arenas:
 * **Opponent model** By default the simulator pits your agent against `gpt-4o`.  
   That means **OpenAI API calls (and cost) are incurred** ⇒ set `OPENAI_API_KEY` in your environment.  
   Prefer zero-cost? Swap in any local model (Llama 3, Gemma, etc.) with the `--opponent_model` flag.
-
 * **Gemini quirk** Some Gemini versions return streaming chunks that break the parser; GPT-series work out-of-the-box.
+* **Under Construction** We are fixing the error and integrating the methods.
 
 
 ## Environment
