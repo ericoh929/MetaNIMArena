@@ -19,9 +19,9 @@ parser.add_argument('--agent1_model',     type=str,   default=None, help='model'
 parser.add_argument('--agent2_model',     type=str,   default='gpt-4o', help='model')
 parser.add_argument('--agent1_prompt',     type=str,   default='basic', help='prompt_method')
 parser.add_argument('--agent2_prompt',     type=str,   default='basic', help='prompt_method')
-parser.add_argument('--num_games',     type=int,   default='50', help='Number of Games')
+parser.add_argument('--num_games',     type=int,   default=50, help='Number of Games')
 parser.add_argument('--temperature',     type=float,   default='0.7', help='prompt-refine temperature')
-parser.add_argument('--max_take',     type=int,   default=3, help='prompt_method')
+parser.add_argument('--max_take',     type=int,   default=3, help='maximum_taken_range')
 args = parser.parse_args()
 
 # Initialize the game parameters
