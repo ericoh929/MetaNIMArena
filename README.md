@@ -4,7 +4,7 @@ A lightweight playground for **LLM‐powered impartial games**.
 The repo currently ships five classic combinatorial arenas:
 
 | Game | Variant / Goal | Notice |
-|------|----------------|
+|------|----------------|--------|
 | **NIM** | normal & misère | - |
 | **Fibonacci** | normal & misère | - |
 | **Kayles** | single & two-row pins | Under construction |
