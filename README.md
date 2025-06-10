@@ -46,3 +46,18 @@ You can also run other baselines by changing the `--agent1_prompt` argument as f
 python nim_normal.py --agent1_model=gpt-4o-mini --agent1_prompt=self_consistency
 ```
 
+## 📄 Citation
+
+If you find this work useful in your research, please consider citing our paper:
+
+### BibTeX
+```bibtex
+@misc{oh2025understandingbiasreinforcementllm,
+      title={Understanding Bias Reinforcement in LLM Agents Debate}, 
+      author={Jihwan Oh and Minchan Jeong and Jongwoo Ko and Se-Young Yun},
+      year={2025},
+      eprint={2503.16814},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2503.16814}, 
+}
